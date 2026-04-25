@@ -39,3 +39,15 @@
 
 # debug information files
 *.dwo
+
+build/
+*.o
+*.a
+*.out
+.DS_Store
+.vscode/
+.idea/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
