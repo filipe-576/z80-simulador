@@ -52,3 +52,4 @@ CMakeCache.txt
 cmake_install.cmake
 Makefile
 z80-simulador
+*.cache/
