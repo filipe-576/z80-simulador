@@ -20,4 +20,7 @@ private:
     uint8_t fetch8();
     uint16_t fetch16();
     void execute(uint8_t opcode);
+
+    void push(uint16_t value);
+    uint16_t pop();
 };
