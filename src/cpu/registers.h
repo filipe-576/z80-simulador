@@ -2,7 +2,12 @@
 
 #include <cstdint>
 
+/**
+ * @brief    Usa os 6 bits menos significativos. 
+ *           F = 0b{ 0 0 S Z H PV N C }.
+ */
 struct Flags {
+
     bool S  = false;
     bool Z  = false;
     bool H  = false;
@@ -11,7 +16,20 @@ struct Flags {
     bool C  = false;
 
     void reset();
+
+
+/**
+ * @brief   F = 0b{ 0 0 S Z H PV N C }.
+ * @return  Flags como byte de 8 bits.
+ */
     uint8_t toByte() const;
+
+
+/**
+ * @brief   Atribui o byte de parâmetro nas flags correspondentes.
+ *          F = 0b{ 0 0 S Z H PV N C }.
+ * @param   byte Flag como 8 bits.
+ */
     void fromByte(uint8_t byte);
 };
 
