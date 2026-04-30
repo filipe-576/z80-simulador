@@ -1,4 +1,55 @@
 #include "cpu.h"
+#include <cstdint>
+
+CPU::CPU(Memory& memory): mem(memory){
+}
+
+
+void CPU::reset(){
+    regs.reset();
+    mem.reset();
+    halted = false;
+}
+
+
+Registers& CPU::getRegisters(){
+    return regs;
+}
+
+
+bool CPU::isHalted() const{
+    return halted;
+}
+
+
+void CPU::setHalted(bool value){
+    halted = value;
+}
+
+
+void CPU::step(){
+    uint8_t byte = fetch8();
+
+    // TODO: instruction_set
+}
+
+
+uint8_t CPU::fetch8(){
+    uint16_t address = getRegisters().PC;
+    ++getRegisters().PC;
+
+    return mem.read(address);
+}
+
+uint16_t CPU::fetch16(){
+    uint16_t address = getRegisters().PC;
+    getRegisters().PC += 2;
+
+    uint16_t lowByte = mem.read(address);
+    uint16_t highByte = mem.read(address+1);
+
+    return (highByte << 8) | lowByte;
+}
 
 
 void CPU::push(uint16_t value)
