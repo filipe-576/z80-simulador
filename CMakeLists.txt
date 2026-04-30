@@ -12,7 +12,7 @@ else()
 endif()
 
 add_executable(z80-simulador
-    src/main.cpp
+    src/vm.cpp
     src/cpu/cpu.cpp
     src/cpu/registers.cpp
     src/memory/memory.cpp

@@ -33,7 +33,7 @@ struct Registers {
 
 uint8_t* funcaoFelip(uint8_t regIndex, Registers* registradores);
 
-int main(){
+void temp(){
     Registers regis;
 
     uint8_t byte = 0b10110111; // EXEMPLO
