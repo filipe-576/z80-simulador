@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include "../memory/memory.h"
+#include "../instructions/instruction_set.h"
 #include "registers.h"
 
 class CPU {

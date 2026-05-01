@@ -1,42 +1,12 @@
-#include <cstdint>
-#include <iostream>
-#include <bitset>
-//#include "../cpu/registers.h"
 
+#include "instruction_set.h"
 
-
-struct Registers {
-    uint8_t A = 0;
-    uint8_t B = 0; 
-    uint8_t C = 0;
-    uint8_t D = 0;
-    uint8_t E = 0;
-    uint8_t H = 0;
-    uint8_t L = 0;
-
-    uint16_t PC = 0x0000;
-    uint16_t SP = 0xFFFF;
-    uint16_t IX = 0x0000;
-    uint16_t IY = 0x0000;
-
-    uint16_t AF() const;
-    uint16_t BC() const;
-    uint16_t DE() const;
-    uint16_t HL() const;
-
-    void setBC(uint16_t value);
-    void setDE(uint16_t value);
-    void setHL(uint16_t value);
-
-    void reset();
-};
 
 uint8_t* funcaoFelip(uint8_t regIndex, Registers* registradores);
 
-void temp(){
-    Registers regis;
+void instrucao(CPU &cpu, uint8_t byte){
 
-    uint8_t byte = 0b10000111; // EXEMPLO
+    Registers regis = cpu.getRegisters();
 
     uint8_t op = (byte & 0b11000000) >> 6;
 
