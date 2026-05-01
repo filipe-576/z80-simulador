@@ -1,12 +1,58 @@
-#include <cstdint>
 #include "cpu.h"
+#include <cstdint>
 
-/** 
- * @brief Armazena um valor na pilha e decrementa o SP
- * 
- * @param value Valor de 16 bits a ser armaznado.
- */
-void CPU::push( uint16_t value)
+CPU::CPU(Memory& memory): mem(memory){
+}
+
+
+void CPU::reset(){
+    regs.reset();
+    mem.reset();
+    halted = false;
+}
+
+
+Registers& CPU::getRegisters(){
+    return regs;
+}
+
+
+bool CPU::isHalted() const{
+    return halted;
+}
+
+
+void CPU::setHalted(bool value){
+    halted = value;
+}
+
+
+void CPU::step(){
+    uint8_t byte = fetch8();
+
+    // TODO: instruction_set
+}
+
+
+uint8_t CPU::fetch8(){
+    uint16_t address = getRegisters().PC;
+    ++getRegisters().PC;
+
+    return mem.read(address);
+}
+
+uint16_t CPU::fetch16(){
+    uint16_t address = getRegisters().PC;
+    getRegisters().PC += 2;
+
+    uint16_t lowByte = mem.read(address);
+    uint16_t highByte = mem.read(address+1);
+
+    return (highByte << 8) | lowByte;
+}
+
+
+void CPU::push(uint16_t value)
 {
     uint8_t highByte = static_cast<uint8_t>(value >> 8);
     uint8_t lowByte = value & 0xFF;
@@ -18,11 +64,6 @@ void CPU::push( uint16_t value)
 }
 
 
-/**
- * @brief Retorna o valor do topo da pilha e incrementa o SP
- * 
- * @return Valor de 16 bits que estava no topo da pilha
- */
 uint16_t CPU::pop()
 {
     uint8_t lowByte = mem.read(regs.SP);
