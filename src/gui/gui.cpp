@@ -6,8 +6,10 @@
 // - Getting Started      https://dearimgui.com/getting-started
 // - Documentation        https://dearimgui.com/docs (same as your local docs/ folder).
 // - Introduction, links and more at the top of imgui.cpp
-
+#include "../memory/memory.h"
+#include "gui.h"
 #include "imgui.h"
+#include "imgui_memory_editor.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include <stdio.h>
@@ -35,9 +37,10 @@ static void glfw_error_callback(int error, const char *description)
 }
 
 #include "gui.h"
+static MemoryEditor mem_edit;
 
 // Main code
-int run_interface()
+int run_interface(Memory& mem)
 {
     
     glfwSetErrorCallback(glfw_error_callback);
@@ -152,6 +155,7 @@ int run_interface()
     EMSCRIPTEN_MAINLOOP_BEGIN
 #else
     while (!glfwWindowShouldClose(window))
+    
 #endif
     {
         // Poll and handle events (inputs, window resize, etc.)
@@ -170,6 +174,8 @@ int run_interface()
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
+
+        mem_edit.DrawWindow("Memory Editor", mem.Outro_get_array(), 0x10000);
 
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
         if (show_demo_window)
