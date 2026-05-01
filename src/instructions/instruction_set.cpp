@@ -36,7 +36,7 @@ uint8_t* funcaoFelip(uint8_t regIndex, Registers* registradores);
 int main(){
     Registers regis;
 
-    uint8_t byte = 0b10110111; // EXEMPLO
+    uint8_t byte = 0b10000111; // EXEMPLO
 
     uint8_t op = (byte & 0b11000000) >> 6;
 
@@ -48,8 +48,8 @@ int main(){
     std::cout << std::bitset<8>(y) << '\n';
     std::cout << std::bitset<8>(z) << std::endl;
 
-    uint8_t* reg;
-    regis.A = 0b11000111;
+    uint8_t* reg, *reg2;
+    regis.A = 0b00000111;
 
     switch(op) {
         case 0b10:
@@ -63,8 +63,6 @@ int main(){
                     reg = funcaoFelip( z, &regis );                   
                     regis.A = regis.A | (*reg);
 
-                    std::cout << std::bitset<8>(regis.A);
-
                     break;
 
                 case 0b111: // CP r
@@ -73,12 +71,20 @@ int main(){
                     break;
                 
                 case 0b101: // XOR r
+                    reg = funcaoFelip( z, &regis );                   
+                    regis.A = regis.A ^ (*reg);
                     break;
                 
                 case 0b000: // ADD A, r
+                    reg = funcaoFelip( z, &regis );                   
+                    regis.A = regis.A + (*reg);
+                    std::cout << std::bitset<8>(regis.A);
                     break;
 
                 case 0b010: // SUB A, r
+                    reg = funcaoFelip( z, &regis );                   
+                    regis.A = regis.A - (*reg);
+                    std::cout << std::bitset<8>(regis.A);
                     break;
 
             }
@@ -89,21 +95,30 @@ int main(){
                 case 0b110: // LD (HL), r ou HALT
                     if (z == 0b110){ // HALT
                         
+                        
                     }
                     else{ // LD (HL), r
                     
                     }
             }
 
-            if (z == 0b110){} // LD r, (HL)
+            if (z == 0b110){ // LD r, (HL)
+                
 
-            else{} // LD r, r'
+            } 
+
+            else{  // LD r, r'
+                reg = funcaoFelip( y, &regis ); 
+                reg2 = funcaoFelip( z, &regis ); 
+
+                *reg = *reg2;}
 
             break;
 
         case 0b00:
             switch (y) {
                 case 0b000: // NOP
+
                     break;
 
                 case 0b011: 
@@ -112,12 +127,21 @@ int main(){
                     break;
             switch (z) {
                 case 0b110: // LD r, n
+                    reg = funcaoFelip(y, &regis);
+                    *reg = byte;
+
                     break;
 
                 case 0b100: // INC r
+                    reg = funcaoFelip( y, &regis);
+                    *reg += 1;
+
                     break;
 
                 case 0b101: // DEC r
+                    reg = funcaoFelip( y, &regis);
+                    *reg -= 1;
+
                     break;
             }
 
@@ -145,6 +169,6 @@ int main(){
 }
 
 uint8_t* funcaoFelip(uint8_t regIndex, Registers* registradores){
-    registradores->H = 0b00110001;
+    registradores->H = 0b00000011;
     return &(registradores->H);
 }
