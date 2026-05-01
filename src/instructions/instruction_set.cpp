@@ -1,12 +1,14 @@
-
 #include "instruction_set.h"
+#include "cpu.h"
+#include <iostream>
+#include <bitset>
 
 
 uint8_t* funcaoFelip(uint8_t regIndex, Registers* registradores);
 
 void instrucao(CPU &cpu, uint8_t byte){
 
-    Registers regis = cpu.getRegisters();
+    Registers& regis = cpu.getRegisters();
 
     uint8_t op = (byte & 0b11000000) >> 6;
 
