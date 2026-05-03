@@ -4,7 +4,7 @@
 #include <bitset>
 
 
-uint8_t* funcaoFelip(uint8_t regIndex, Registers* registradores);
+uint8_t* regHelper(uint8_t regIndex, Registers* registradores);
 
 void instrucao(CPU &cpu, uint8_t byte){
 
@@ -27,12 +27,12 @@ void instrucao(CPU &cpu, uint8_t byte){
         case 0b10:
             switch(y) {
                 case 0b100: // AND r
-                    reg = funcaoFelip( z, &regis );                   
+                    reg = regHelper( z, &regis );                   
                     regis.A = regis.A & (*reg);
 
                     break;
                 case 0b110: // OR r
-                    reg = funcaoFelip( z, &regis );                   
+                    reg = regHelper( z, &regis );                   
                     regis.A = regis.A | (*reg);
 
                     break;
@@ -43,18 +43,18 @@ void instrucao(CPU &cpu, uint8_t byte){
                     break;
                 
                 case 0b101: // XOR r
-                    reg = funcaoFelip( z, &regis );                   
+                    reg = regHelper( z, &regis );                   
                     regis.A = regis.A ^ (*reg);
                     break;
                 
                 case 0b000: // ADD A, r
-                    reg = funcaoFelip( z, &regis );                   
+                    reg = regHelper( z, &regis );                   
                     regis.A = regis.A + (*reg);
                     std::cout << std::bitset<8>(regis.A);
                     break;
 
                 case 0b010: // SUB A, r
-                    reg = funcaoFelip( z, &regis );                   
+                    reg = regHelper( z, &regis );                   
                     regis.A = regis.A - (*reg);
                     std::cout << std::bitset<8>(regis.A);
                     break;
@@ -80,8 +80,8 @@ void instrucao(CPU &cpu, uint8_t byte){
             } 
 
             else{  // LD r, r'
-                reg = funcaoFelip( y, &regis ); 
-                reg2 = funcaoFelip( z, &regis ); 
+                reg = regHelper( y, &regis ); 
+                reg2 = regHelper( z, &regis ); 
 
                 *reg = *reg2;}
 
@@ -99,19 +99,19 @@ void instrucao(CPU &cpu, uint8_t byte){
                     break;
             switch (z) {
                 case 0b110: // LD r, n
-                    reg = funcaoFelip(y, &regis);
+                    reg = regHelper(y, &regis);
                     *reg = byte;
 
                     break;
 
                 case 0b100: // INC r
-                    reg = funcaoFelip( y, &regis);
+                    reg = regHelper( y, &regis);
                     *reg += 1;
 
                     break;
 
                 case 0b101: // DEC r
-                    reg = funcaoFelip( y, &regis);
+                    reg = regHelper( y, &regis);
                     *reg -= 1;
 
                     break;
@@ -140,7 +140,16 @@ void instrucao(CPU &cpu, uint8_t byte){
             }
 }
 
-uint8_t* funcaoFelip(uint8_t regIndex, Registers* registradores){
-    registradores->H = 0b00000011;
-    return &(registradores->H);
+uint8_t* regHelper(uint8_t regIndex, Registers* registradores){
+    switch(regIndex) {
+        case 0b000: return &(registradores->B);
+        case 0b001: return &(registradores->C);
+        case 0b010: return &(registradores->D);
+        case 0b011: return &(registradores->E);
+        case 0b100: return &(registradores->H);
+        case 0b101: return &(registradores->L);
+        case 0b110: return nullptr;             // (HL) - Memória
+        case 0b111: return &(registradores->A);
+        default: return nullptr;
+    }
 }
