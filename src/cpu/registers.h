@@ -60,5 +60,7 @@ struct Registers {
     void setDE(uint16_t value);
     void setHL(uint16_t value);
 
+    uint8_t registerFromByte(uint8_t byte);
+
     void reset();
 };
