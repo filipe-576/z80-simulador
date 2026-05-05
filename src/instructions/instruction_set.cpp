@@ -3,13 +3,7 @@
 #include <iostream>
 #include <bitset>
 
-bool getParity(uint8_t val) {
-    int count = 0;
-    for (int i = 0; i < 8; i++) {
-        if (val & (1 << i)) count++;
-    }
-    return (count % 2 == 0);
-}
+bool getParity(uint8_t val);
 
 uint8_t* regHelper(uint8_t regIndex, Registers* registradores, Memory& memory);
 
@@ -28,8 +22,7 @@ void instrucao(CPU &cpu, uint8_t byte){
     std::cout << std::bitset<8>(z) << std::endl;
 
     uint8_t* reg, *reg2;
-    // Imagining cpu.getMemory() exists as per our agreement
-    Memory& memory = cpu.getMemory();
+    //Memory& memory = cpu.getMemory();
 
     switch(op) {
         case 0b10:
@@ -40,7 +33,7 @@ void instrucao(CPU &cpu, uint8_t byte){
 
                     regis.F.S = (regis.A & 0x80) != 0;
                     regis.F.Z = (regis.A == 0);
-                    regis.F.H = true; // No Z80, AND sempre seta H
+                    regis.F.H = true;
                     regis.F.PV = getParity(regis.A);
                     regis.F.N = false;
                     regis.F.C = false;
@@ -59,7 +52,7 @@ void instrucao(CPU &cpu, uint8_t byte){
                     break;
                 }
 
-                case 0b111: { // CP r (Mesma lógica do SUB, mas sem salvar em A)
+                case 0b111: { // CP r
                     reg = regHelper( z, &regis, memory );
                     uint8_t val = *reg;
                     uint16_t res = regis.A - val;
@@ -138,7 +131,7 @@ void instrucao(CPU &cpu, uint8_t byte){
                     break;
 
                 case 0b011: 
-                    if (z == 0b000) { /* JR offset - precisa implementar */ }
+                    if (z == 0b000) {} // TODO JR offset
                     break;
             }
             
@@ -179,13 +172,13 @@ void instrucao(CPU &cpu, uint8_t byte){
 
         case 0b11:
             switch(z) {
-                case 0b101: // z=5: PUSH rp ou CALL addr
-                    if (y == 0b001) { // CALL addr (CD)
+                case 0b101:
+                    if (y == 0b001) { // CALL addr
                         uint16_t addr = cpu.fetch16();
                         cpu.push(regis.PC);
                         regis.PC = addr;
                     } 
-                    else if ((y & 0b001) == 0) { // PUSH rp (C5, D5, E5, F5)
+                    else if ((y & 0b001) == 0) { // PUSH rp
                         uint16_t val;
                         if (y == 0)      val = regis.BC();
                         else if (y == 2) val = regis.DE();
@@ -196,10 +189,10 @@ void instrucao(CPU &cpu, uint8_t byte){
                     break;
                     
                 case 0b001: // z=1: POP rp ou RET
-                    if (y == 0b001) { // RET (C9)
+                    if (y == 0b001) { // RET
                         regis.PC = cpu.pop();
                     } 
-                    else if ((y & 0b001) == 0) { // POP rp (C1, D1, E1, F1)
+                    else if ((y & 0b001) == 0) { // POP rp
                         uint16_t val = cpu.pop();
                         if (y == 0)      regis.setBC(val);
                         else if (y == 2) regis.setDE(val);
@@ -230,8 +223,16 @@ uint8_t* regHelper(uint8_t regIndex, Registers* registradores, Memory& memory){
         case 0b011: return &(registradores->E);
         case 0b100: return &(registradores->H);
         case 0b101: return &(registradores->L);
-        case 0b110: return memory.get_pointer( registradores->HL() );             // (HL) - Memória
+        case 0b110: return memory.get_pointer( registradores->HL() );             // getpointer imaginario só pra saber que precisa de uma funçao pra retornar o endereço
         case 0b111: return &(registradores->A);
         default: return nullptr;
     }
+}
+
+ bool getParity(uint8_t val){
+    int count = 0;
+    for (int i = 0; i < 8; i++) {
+        if (val & (1 << i)) count++;
+    }
+    return (count % 2 == 0);
 }
