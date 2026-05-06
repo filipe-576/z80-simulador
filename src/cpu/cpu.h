@@ -8,6 +8,7 @@
 class CPU {
 public:
     CPU(Memory& memory);
+    Memory& mem;
 
 /** 
  * @brief   Reseta os registradores e memória
@@ -32,13 +33,7 @@ public:
     
     Registers& getRegisters();
 
-
-    private:
-    Memory& mem;
-    Registers regs;
-    bool halted = false;
-
-/** 
+    /** 
  * @brief   Retorna o pŕoximo byte do programa e incrementa o PC
  * 
  * @return  O pŕoximo byte do programa
@@ -68,4 +63,12 @@ public:
  * @return  Valor de 16 bits que estava no topo da pilha
  */
     uint16_t pop();
+
+
+    private:
+
+    Registers regs;
+    bool halted = false;
+
+
 };

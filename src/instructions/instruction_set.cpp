@@ -5,7 +5,7 @@
 
 bool getParity(uint8_t val);
 
-uint8_t* regHelper(uint8_t regIndex, Registers* registradores, Memory& memory);
+uint8_t* registerFromByte(uint8_t regIndex, Registers* registradores);
 
 void instrucao(CPU &cpu, uint8_t byte){
 
@@ -28,7 +28,7 @@ void instrucao(CPU &cpu, uint8_t byte){
         case 0b10:
             switch(y) {
                 case 0b100: { // AND r
-                    reg = regHelper( z, &regis, memory );                   
+                    reg = registerFromByte( z, &regis );                   
                     regis.A &= (*reg);
 
                     regis.F.S = (regis.A & 0x80) != 0;
@@ -40,7 +40,7 @@ void instrucao(CPU &cpu, uint8_t byte){
                     break;
                 }
                 case 0b110: { // OR r
-                    reg = regHelper( z, &regis, memory );                   
+                    reg = registerFromByte( z, &regis );                   
                     regis.A |= (*reg);
 
                     regis.F.S = (regis.A & 0x80) != 0;
@@ -53,7 +53,7 @@ void instrucao(CPU &cpu, uint8_t byte){
                 }
 
                 case 0b111: { // CP r
-                    reg = regHelper( z, &regis, memory );
+                    reg = registerFromByte( z, &regis );
                     uint8_t val = *reg;
                     uint16_t res = regis.A - val;
 
@@ -67,7 +67,7 @@ void instrucao(CPU &cpu, uint8_t byte){
                 }
                 
                 case 0b101: { // XOR r
-                    reg = regHelper( z, &regis, memory );                   
+                    reg = registerFromByte( z, &regis );                   
                     regis.A ^= (*reg);
 
                     regis.F.S = (regis.A & 0x80) != 0;
@@ -80,7 +80,7 @@ void instrucao(CPU &cpu, uint8_t byte){
                 }
                 
                 case 0b000: { // ADD A, r
-                    reg = regHelper( z, &regis, memory );                   
+                    reg = registerFromByte( z, &regis );                   
                     uint8_t val = *reg;
                     uint16_t res = regis.A + val;
 
@@ -96,7 +96,7 @@ void instrucao(CPU &cpu, uint8_t byte){
                 }
 
                 case 0b010: { // SUB A, r
-                    reg = regHelper( z, &regis, memory );                   
+                    reg = registerFromByte( z, &regis );                   
                     uint8_t val = *reg;
                     uint16_t res = regis.A - val;
 
@@ -115,14 +115,26 @@ void instrucao(CPU &cpu, uint8_t byte){
 
             break;
         case 0b01:
-            if (y == 0b110 && z == 0b110) { // HALT
-                cpu.setHalted(true);
+            switch(y) {
+                case 0b110: // LD (HL), r ou HALT
+
+                    if (z == 0b110){ // HALT
+                        cpu.setHalted(true);
+                    }
+                    else{ // LD (HL), r
+                        //reg = registerFromByte(z, &regis);
+                    }
+            } 
+            if (z == 0b110){ // LD r, (HL)
+               //uint16_t hl = regis.HL(); 
             }
-            else { // LD r, r' ou LD r, (HL) ou LD (HL), r
-                reg = regHelper(y, &regis, memory);
-                reg2 = regHelper(z, &regis, memory);
+
+            else { // LD r, r'
+                reg = registerFromByte(y, &regis);
+                reg2 = registerFromByte(z, &regis);
                 if (reg && reg2) *reg = *reg2;
             }
+
             break;
 
         case 0b00:
@@ -137,12 +149,12 @@ void instrucao(CPU &cpu, uint8_t byte){
             
             switch (z) {
                 case 0b110: // LD r, n
-                    reg = regHelper(y, &regis, memory);
+                    reg = registerFromByte(y, &regis);
                     *reg = cpu.fetch8(); 
                     break;
 
                 case 0b100: { // INC r
-                    reg = regHelper(y, &regis, memory);
+                    reg = registerFromByte(y, &regis);
                     uint8_t old = *reg;
                     *reg += 1;
                     
@@ -155,7 +167,7 @@ void instrucao(CPU &cpu, uint8_t byte){
                 }
 
                 case 0b101: { // DEC r
-                    reg = regHelper(y, &regis, memory);
+                    reg = registerFromByte(y, &regis);
                     uint8_t old = *reg;
                     *reg -= 1;
 
@@ -215,7 +227,7 @@ void instrucao(CPU &cpu, uint8_t byte){
     }
 }
 
-uint8_t* regHelper(uint8_t regIndex, Registers* registradores, Memory& memory){
+uint8_t* registerFromByte(uint8_t regIndex, Registers* registradores){
     switch(regIndex) {
         case 0b000: return &(registradores->B);
         case 0b001: return &(registradores->C);
@@ -223,7 +235,6 @@ uint8_t* regHelper(uint8_t regIndex, Registers* registradores, Memory& memory){
         case 0b011: return &(registradores->E);
         case 0b100: return &(registradores->H);
         case 0b101: return &(registradores->L);
-        case 0b110: return memory.get_pointer( registradores->HL() );             // getpointer imaginario só pra saber que precisa de uma funçao pra retornar o endereço
         case 0b111: return &(registradores->A);
         default: return nullptr;
     }

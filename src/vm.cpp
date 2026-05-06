@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
+#include <bitset>
 
 std::vector<uint8_t> getProgram(const std::string& fileName){
     std::ifstream file(fileName, std::ios::binary);
@@ -36,5 +37,16 @@ int main(){
 
     while( !cpu.isHalted() ){
         cpu.step();
+        Registers& regis = cpu.getRegisters();
+        std::cout << "Regis.A: "<< std::bitset<8>(regis.A) << std::endl;
+        std::cout << "Regis.B: "<< std::bitset<8>(regis.B) << std::endl;
+        std::cout << "Regis.C: "<< std::bitset<8>(regis.C) << std::endl;
+        std::cout << "Regis.D: "<< std::bitset<8>(regis.D) << std::endl;
+        std::cout << "Regis.E: "<< std::bitset<8>(regis.E) << std::endl;
+        std::cout << "Regis.H: "<< std::bitset<8>(regis.H) << std::endl;
+        std::cout << "Regis.L: "<< std::bitset<8>(regis.L) << std::endl;
+
+        std::cin.get();
+
     }
 }
