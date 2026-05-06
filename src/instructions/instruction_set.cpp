@@ -22,7 +22,6 @@ void instrucao(CPU &cpu, uint8_t byte){
     std::cout << std::bitset<8>(z) << std::endl;
 
     uint8_t* reg, *reg2;
-    //Memory& memory = cpu.getMemory();
 
     switch(op) {
         case 0b10:
@@ -60,7 +59,7 @@ void instrucao(CPU &cpu, uint8_t byte){
                     regis.F.S = (res & 0x80) != 0;
                     regis.F.Z = ((uint8_t)res == 0);
                     regis.F.H = ((regis.A & 0x0F) < (val & 0x0F));
-                    regis.F.PV = ((regis.A ^ val) & (regis.A ^ res) & 0x80) != 0;
+                    regis.F.PV = checkOverflowAdd(regis.A, val, res);
                     regis.F.N = true;
                     regis.F.C = (regis.A < val);
                     break;
@@ -87,7 +86,7 @@ void instrucao(CPU &cpu, uint8_t byte){
                     regis.F.S = (res & 0x80) != 0;
                     regis.F.Z = ((uint8_t)res == 0);
                     regis.F.H = ((regis.A & 0x0F) + (val & 0x0F)) > 0x0F;
-                    regis.F.PV = ((regis.A ^ res) & (val ^ res) & 0x80) != 0;
+                    regis.F.PV = checkOverflowAdd(regis.A, val, res);
                     regis.F.N = false;
                     regis.F.C = (res > 0xFF);
 
@@ -103,7 +102,7 @@ void instrucao(CPU &cpu, uint8_t byte){
                     regis.F.S = (res & 0x80) != 0;
                     regis.F.Z = ((uint8_t)res == 0);
                     regis.F.H = ((regis.A & 0x0F) < (val & 0x0F));
-                    regis.F.PV = ((regis.A ^ val) & (regis.A ^ res) & 0x80) != 0;
+                    regis.F.PV = checkOverflowSub(regis.A, val, res);
                     regis.F.N = true;
                     regis.F.C = (regis.A < val);
 
@@ -122,11 +121,13 @@ void instrucao(CPU &cpu, uint8_t byte){
                         cpu.setHalted(true);
                     }
                     else{ // LD (HL), r
-                        //reg = registerFromByte(z, &regis);
+                        uint16_t hl = regis.HL();
+                        reg = registerFromByte(z, &regis);
+                        cpu.mem.write(hl, *reg);
                     }
             } 
             if (z == 0b110){ // LD r, (HL)
-               //uint16_t hl = regis.HL(); 
+               // 
             }
 
             else { // LD r, r'
@@ -247,3 +248,12 @@ uint8_t* registerFromByte(uint8_t regIndex, Registers* registradores){
     }
     return (count % 2 == 0);
 }
+
+bool checkOverflowAdd( uint8_t a, uint8_t value, uint8_t res ) {
+    return ( (a ^ res) & (value ^ res) & 0x80 ) != 0;
+}
+
+bool checkOverflowSub( uint8_t a, uint8_t value, uint8_t res ) {
+    return ( (a ^ value) & (a ^ res) & 0x80 ) != 0;
+}
+
