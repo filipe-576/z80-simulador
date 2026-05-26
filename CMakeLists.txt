@@ -1,5 +1,4 @@
 cmake_minimum_required(VERSION 3.16)
-
 project(z80-simulador LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -26,21 +25,22 @@ set(IMGUI_SOURCES
     "${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp"
 )
 
+# Simulador z80
 add_executable(z80-simulador
-    src/main.cpp
-    src/cpu/cpu.cpp
-    src/cpu/registers.cpp
-    src/memory/memory.cpp
-    src/instructions/instruction_set.cpp
-    src/gui/gui.cpp
+    src/vm.cpp
+    src/z80/cpu/cpu.cpp
+    src/z80/cpu/registers.cpp
+    src/z80/memory/memory.cpp
+    src/z80/instructions/instruction_set.cpp
+    src/z80/gui/gui.cpp
     ${IMGUI_SOURCES}
 )
 
 target_include_directories(z80-simulador PRIVATE
-    src/cpu
-    src/memory
-    src/instructions
-    src/gui
+    src/z80/cpu
+    src/z80/memory
+    src/z80/instructions
+    src/z80/gui
     ${IMGUI_DIR}
     ${IMGUI_DIR}/backends
     ${GLFW_INCLUDE_DIRS}
@@ -61,3 +61,34 @@ if(APPLE)
         ${COREVIDEO_FRAMEWORK}
     )
 endif()
+
+
+# Processador de Macros
+add_executable(macro_processor
+    src/macro/main.cpp
+    src/macro/macro_processor.cpp
+)
+
+target_include_directories(macro_processor PRIVATE
+    src/macro
+)
+
+# Montador
+add_executable(assembler
+    src/assembler/main.cpp
+    src/assembler/assembler.cpp
+)
+
+target_include_directories(assembler PRIVATE
+    src/assembler
+)
+
+# Ligador
+add_executable(linker
+    src/linker/main.cpp
+    src/linker/linker.cpp
+)
+
+target_include_directories(linker PRIVATE
+    src/linker
+)
