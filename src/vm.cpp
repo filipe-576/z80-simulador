@@ -6,6 +6,8 @@
 #include <iostream>
 #include <stdexcept>
 #include <bitset>
+#include <gui.h>
+
 
 std::vector<uint8_t> getProgram(const std::string& fileName){
     std::ifstream file(fileName, std::ios::binary);
@@ -30,6 +32,9 @@ int main(){
 
     Memory mem;
     CPU cpu(mem);
+    GUI gui;
+    gui.run_interface(mem);
+
 
     std::vector<uint8_t> program = getProgram(fileName);
 

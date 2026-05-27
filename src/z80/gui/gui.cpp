@@ -40,9 +40,9 @@ static void glfw_error_callback(int error, const char *description)
 static MemoryEditor mem_edit;
 
 // Main code
-int run_interface(Memory& mem)
+int GUI::run_interface(Memory &mem)
 {
-    
+
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit())
         return 1;
@@ -155,7 +155,7 @@ int run_interface(Memory& mem)
     EMSCRIPTEN_MAINLOOP_BEGIN
 #else
     while (!glfwWindowShouldClose(window))
-    
+
 #endif
     {
         // Poll and handle events (inputs, window resize, etc.)

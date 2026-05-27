@@ -1,4 +1,8 @@
 #pragma once
 class Memory;
 
-int run_interface(Memory& mem);
+class GUI
+{
+public:
+    int run_interface(Memory &mem);
+};
