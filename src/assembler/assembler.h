@@ -23,9 +23,8 @@ private:
         "CALL","RET", "PUSH", "POP", "NOP", "HALT"
     };
     const std::set<std::string> PSEUDO_INSTRUCTIONS = {
-        "ORG", "END", "EQU"
+        "ORG", "END", "EQU", "DS"
     };
-
 
     void loadFile();
 
@@ -33,14 +32,20 @@ private:
     
     void secondPass();
 
-    std::string getLabel(std::string line);
+    std::vector<std::string> tokenizeInstruction(std::string instruction);
 
-    std::string getOpcode(std::string line);
+    std::string getLabel(std::vector<std::string> instruction);
 
-    std::string getOperand(std::string line);
+    std::string getOpcode(std::vector<std::string> instruction);
+
+    std::string getOperand(std::vector<std::string> instruction, unsigned short index=0);
 
     unsigned int getOperandValue(std::string operand);
 
+    unsigned int getInstructionSize(std::vector<std::string> instruction);
+
     void insertTable(std::string label, unsigned int value);
+
+    int findTable(std::string label);
 
 };
