@@ -1,4 +1,5 @@
 #pragma once
+
 #include <string>
 #include <vector>
 #include <iostream>
@@ -12,7 +13,6 @@ private:
     std::string currentMacroName;
     std::vector<std::string> currentFormalParams;
 
-    // Métodos utilitários encapsulados
     std::vector<std::string> extractFormalParameters(const std::string& operandsPart);
     std::string replaceFormalWithPositional(const std::string& line, const std::vector<std::string>& formalParams);
 
@@ -20,11 +20,12 @@ public:
     PassOne() : currentState(State::NORMAL) {}
 
     /**
-     * @brief Executa a Passagem 1 consumindo uma stream de entrada e gerando uma stream intermediária.
-     * @param input Stream do código-fonte original.
-     * @param intermediateOutput Stream de saída para o código sem definições.
-     * @param ctx Referência ao contexto de macros a ser populado.
-     * @return true em caso de sucesso, false caso haja erro de sintaxe.
+     * @brief  Mapeia as macros do programa, substituindo parâmetros formais por genéricos (#1, #2).
+     *
+     * @param  input               Stream do arquivo Assembly inicial.
+     * @param  intermediateOutput  Stream gravando o código expurgado das diretivas de definição.
+     * @param  ctx                 Dicionário estrutural que guardará os blocos (MNT/MDT).
+     * @return                     Verdadeiro se não houveram quebras de bloco "ENDM", Falso para falhas de sintaxe.
      */
     bool execute(std::istream& input, std::ostream& intermediateOutput, MacroContext& ctx);
 };

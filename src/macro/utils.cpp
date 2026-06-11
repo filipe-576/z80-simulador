@@ -1,72 +1,84 @@
 #include "utils.h"
 #include <algorithm>
 #include <cctype>
+#include <cstdint>
 
 namespace Utils {
 
-    // Função interna para verificar se um caractere faz parte de um identificador/token.
-    // Em Assembly de macros, consideramos letras, números, underscore e o '&'.
-    static bool isWordChar(char c) {
-        return std::isalnum(static_cast<unsigned char>(c)) || c == '_' || c == '&';
+    bool isWordChar(char character) {
+        // Z80 Assembly e o Processador usam letras, números, sublinhado e o caractere comercial para definir blocos.
+        return std::isalnum(static_cast<unsigned char>(character)) || character == '_' || character == '&';
     }
 
-    std::string trim(const std::string& str) {
-        if (str.empty()) return str;
 
-        auto start = std::find_if_not(str.begin(), str.end(), [](unsigned char c) {
-            return std::isspace(c);
+    std::string trim(const std::string& str) {
+        if (str.empty()) {
+            return str;
+        }
+
+        auto start = std::find_if_not(str.begin(), str.end(), [](unsigned char character) {
+            return std::isspace(character);
         });
 
-        if (start == str.end()) return ""; // String apenas com espaços
+        if (start == str.end()) {
+            return "";
+        }
 
-        auto end = std::find_if_not(str.rbegin(), str.rend(), [](unsigned char c) {
-            return std::isspace(c);
+        auto end = std::find_if_not(str.rbegin(), str.rend(), [](unsigned char character) {
+            return std::isspace(character);
         }).base();
 
         return std::string(start, end);
     }
 
+
     std::string toUpperCase(const std::string& str) {
         std::string result = str;
-        std::transform(result.begin(), result.end(), result.begin(), [](unsigned char c) {
-            return std::toupper(c);
+
+        std::transform(result.begin(), result.end(), result.begin(), [](unsigned char character) {
+            return std::toupper(character);
         });
+
         return result;
     }
 
+
     std::string stripComments(const std::string& line) {
         bool inQuotes = false;
-        for (size_t i = 0; i < line.length(); ++i) {
+
+        for (uint32_t i = 0; i < line.length(); ++i) {
+            // Alterna o estado (toggle) para ignorar falsos positivos de comentários dentro de strings no Assembly.
             if (line[i] == '\'') {
-                inQuotes = !inQuotes; // Alterna o estado ao encontrar aspas simples
+                inQuotes = !inQuotes;
             } else if (line[i] == ';' && !inQuotes) {
-                // Se encontrar um ';' fora de aspas, corta a string aqui
                 return line.substr(0, i);
             }
         }
+
         return line;
     }
+
 
     std::vector<std::string> splitOperands(const std::string& operandString, char delimiter) {
         std::vector<std::string> tokens;
         std::string currentToken;
         bool inQuotes = false;
 
-        for (char c : operandString) {
-            if (c == '\'') {
+        for (char character : operandString) {
+            // Aspas protegem o delimitador de fatiar uma string contínua que faz parte da instrução.
+            if (character == '\'') {
                 inQuotes = !inQuotes;
-                currentToken += c;
-            } else if (c == delimiter && !inQuotes) {
-                // Delimitador encontrado fora de aspas: guarda o token atual e limpa
+                currentToken += character;
+            } else if (character == delimiter && !inQuotes) {
                 tokens.push_back(trim(currentToken));
                 currentToken.clear();
             } else {
-                currentToken += c;
+                currentToken += character;
             }
         }
 
-        // Adiciona o último token (se existir)
         std::string finalToken = trim(currentToken);
+
         if (!finalToken.empty() || !tokens.empty()) {
             tokens.push_back(finalToken);
         }
@@ -74,63 +86,67 @@ namespace Utils {
         return tokens;
     }
 
+
     std::string replaceToken(const std::string& source, const std::string& target, const std::string& replacement) {
-        if (target.empty()) return source;
+        if (target.empty()) {
+            return source;
+        }
 
         std::string result = source;
         size_t pos = 0;
 
+        // Itera para substituir todas as ocorrências de um token posicional durante a expansão da macro.
         while ((pos = result.find(target, pos)) != std::string::npos) {
             bool isExactMatch = true;
 
-            // Verifica o limite esquerdo do token
+            // Blinda contra "falsos positivos" (ex: substituir #1 em #10) checando os limites do token à esquerda.
             if (pos > 0) {
                 char prevChar = result[pos - 1];
                 if (isWordChar(prevChar)) {
-                    isExactMatch = false; // O token encontrado é um sufixo de outra palavra
+                    isExactMatch = false;
                 }
             }
 
-            // Verifica o limite direito do token
+            // Blinda checando limites à direita.
             size_t nextPos = pos + target.length();
+
             if (isExactMatch && nextPos < result.length()) {
                 char nextChar = result[nextPos];
                 if (isWordChar(nextChar)) {
-                    isExactMatch = false; // O token encontrado é um prefixo de outra palavra
+                    isExactMatch = false;
                 }
             }
 
-            // Substitui apenas se for uma palavra isolada
             if (isExactMatch) {
                 result.replace(pos, target.length(), replacement);
-                pos += replacement.length(); // Avança o tamanho do novo texto
+                pos += replacement.length();
             } else {
-                pos += target.length(); // Avança para continuar a procura sem substituir
+                pos += target.length();
             }
         }
 
         return result;
     }
 
-    // Função auxiliar interna para separar Rótulo, Instrução e Operandos
-    // Uma regra clássica de montadores: se o primeiro caractere não é espaço, é um rótulo.
+
     void parseAssemblyLine(const std::string& line, std::string& label, std::string& opcode, std::string& operands) {
         label.clear();
         opcode.clear();
         operands.clear();
 
-        if (line.empty()) return;
+        if (line.empty()) {
+            return;
+        }
 
         size_t pos = 0;
 
-        // 1. Extrai o Rótulo (se houver)
+        // O Assembly determina que a coluna zero (sem espaços) pertence a rótulos.
         if (!std::isspace(line[0])) {
             size_t endLabel = line.find_first_of(" \t");
             label = line.substr(0, endLabel);
             pos = endLabel;
         }
 
-        // 2. Extrai o Opcode (Instrução)
         if (pos != std::string::npos) {
             size_t startOpcode = line.find_first_not_of(" \t", pos);
             if (startOpcode != std::string::npos) {
@@ -142,7 +158,6 @@ namespace Utils {
             }
         }
 
-        // 3. Extrai os Operandos
         if (pos != std::string::npos) {
             size_t startOperands = line.find_first_not_of(" \t", pos);
             if (startOperands != std::string::npos) {
@@ -150,9 +165,8 @@ namespace Utils {
             }
         }
 
-        // Normalização para evitar erros de case sensitivity (ex: "Macro" vs "MACRO")
         opcode = Utils::toUpperCase(opcode);
         label = Utils::toUpperCase(label);
     }
 
-} // namespace Utils
+}
