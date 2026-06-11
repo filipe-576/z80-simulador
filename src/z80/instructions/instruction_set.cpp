@@ -153,48 +153,51 @@ void executeInstruction(CPU &cpu, uint8_t byte){
             break;
 
         case 0b00:
-            switch (y) {
-                case 0b000: // NOP
-                    break;
+            // z = 110 (6) -> LD r, n  |  LD (HL), n
+            if (z == 0b110) { 
+                uint8_t n = cpu.fetch8();
+                writeRegOrHL(cpu, y, n);
+            }
 
-                case 0b011: 
-                    if (z == 0b000) {} // TODO JR offset
-                    break;
+            // z = 100 (4) -> INC r  |  INC (HL)
+            else if (z == 0b100) { 
+                uint8_t oldVal = readRegOrHL(cpu, y);
+                uint8_t newVal = oldVal + 1;
+                writeRegOrHL(cpu, y, newVal);
+                
+                regis.F.S = (newVal & 0x80) != 0;
+                regis.F.Z = (newVal == 0);
+                regis.F.H = (oldVal & 0x0F) == 0x0F;
+                regis.F.PV = (oldVal == 0x7F);
+                regis.F.N = false;
+            }
+
+            // z = 101 (5) -> DEC r  |  DEC (HL)
+            else if (z == 0b101) { 
+                uint8_t oldVal = readRegOrHL(cpu, y);
+                uint8_t newVal = oldVal - 1;
+                writeRegOrHL(cpu, y, newVal);
+
+                regis.F.S = (newVal & 0x80) != 0;
+                regis.F.Z = (newVal == 0);
+                regis.F.H = (oldVal & 0x0F) == 0x00;
+                regis.F.PV = (oldVal == 0x80);
+                regis.F.N = true;
             }
             
-            switch (z) {
-                case 0b110: // LD r, n
-                    reg = registerFromByte(y, &regis);
-                    *reg = cpu.fetch8(); 
-                    break;
+            // z = 000 (0) -> Operações de Controle (NOP, JR, etc)
+            else if (z == 0b000) {
+                switch (y) {
+                    case 0b000: // NOP
+                        break;
 
-                case 0b100: { // INC r
-                    uint8_t oldVal = readRegOrHL(cpu, y);
-                    uint8_t newVal = oldVal + 1;
-                    writeRegOrHL(cpu, y, newVal);
-                    
-                    regis.F.S = (*reg & 0x80) != 0;
-                    regis.F.Z = (*reg == 0);
-                    regis.F.H = (oldVal & 0x0F) == 0x0F;
-                    regis.F.PV = (oldVal == 0x7F);
-                    regis.F.N = false;
-                    break;
-                }
-
-                case 0b101: { // DEC r
-                    uint8_t oldVal = readRegOrHL(cpu, y);
-                    uint8_t newVal = oldVal - 1;
-                    writeRegOrHL(cpu, y, newVal);
-
-                    regis.F.S = (*reg & 0x80) != 0;
-                    regis.F.Z = (*reg == 0);
-                    regis.F.H = (oldVal & 0x0F) == 0x00;
-                    regis.F.PV = (oldVal == 0x80);
-                    regis.F.N = true;
-                    break;
+                    case 0b011: { // JR offset
+                        int8_t offset = static_cast<int8_t>(cpu.fetch8()); 
+                        regis.PC += offset;
+                        break;
+                    }
                 }
             }
-
             break;
 
         case 0b11:
