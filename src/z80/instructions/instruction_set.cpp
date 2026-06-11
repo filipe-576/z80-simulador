@@ -7,6 +7,23 @@ bool getParity(uint8_t val);
 
 uint8_t* registerFromByte(uint8_t regIndex, Registers* registradores);
 
+uint8_t readRegOrHL(CPU& cpu, uint8_t index) {
+    if (index == 0b110) {
+        return cpu.mem.read(cpu.getRegisters().HL());
+    }
+    uint8_t* reg = registerFromByte(index, &cpu.getRegisters());
+    return *reg;
+}
+
+void writeRegOrHL(CPU& cpu, uint8_t index, uint8_t value) {
+    if (index == 0b110) {
+        cpu.mem.write(cpu.getRegisters().HL(), value);
+    } else {
+        uint8_t* reg = registerFromByte(index, &cpu.getRegisters());
+        *reg = value;
+    }
+}
+
 void executeInstruction(CPU &cpu, uint8_t byte){
 
     Registers& regis = cpu.getRegisters();
@@ -18,15 +35,15 @@ void executeInstruction(CPU &cpu, uint8_t byte){
     std::cout << std::bitset<8>(op) << '\n';
     std::cout << std::bitset<8>(y) << '\n';
     std::cout << std::bitset<8>(z) << std::endl;
-    
+
     uint8_t* reg, *reg2;
 
     switch(op) {
         case 0b10:
             switch(y) {
                 case 0b100: { // AND r
-                    reg = registerFromByte( z, &regis );                   
-                    regis.A &= (*reg);
+                    uint8_t val = readRegOrHL(cpu, z);                   
+                    regis.A &= val;
 
                     regis.F.S = (regis.A & 0x80) != 0;
                     regis.F.Z = (regis.A == 0);
@@ -37,8 +54,8 @@ void executeInstruction(CPU &cpu, uint8_t byte){
                     break;
                 }
                 case 0b110: { // OR r
-                    reg = registerFromByte( z, &regis );                   
-                    regis.A |= (*reg);
+                    uint8_t val = readRegOrHL(cpu, z);                  
+                    regis.A |= val;
 
                     regis.F.S = (regis.A & 0x80) != 0;
                     regis.F.Z = (regis.A == 0);
@@ -50,8 +67,7 @@ void executeInstruction(CPU &cpu, uint8_t byte){
                 }
 
                 case 0b111: { // CP r
-                    reg = registerFromByte( z, &regis );
-                    uint8_t val = *reg;
+                    uint8_t val = readRegOrHL(cpu, z);
                     uint16_t res = regis.A - val;
 
                     regis.F.S = (res & 0x80) != 0;
@@ -64,8 +80,8 @@ void executeInstruction(CPU &cpu, uint8_t byte){
                 }
                 
                 case 0b101: { // XOR r
-                    reg = registerFromByte( z, &regis );                   
-                    regis.A ^= (*reg);
+                    uint8_t val = readRegOrHL(cpu, z);                 
+                    regis.A ^= val;
 
                     regis.F.S = (regis.A & 0x80) != 0;
                     regis.F.Z = (regis.A == 0);
@@ -77,8 +93,7 @@ void executeInstruction(CPU &cpu, uint8_t byte){
                 }
                 
                 case 0b000: { // ADD A, r
-                    reg = registerFromByte( z, &regis );                   
-                    uint8_t val = *reg;
+                    uint8_t val = readRegOrHL(cpu, z);                  
                     uint16_t res = regis.A + val;
 
                     regis.F.S = (res & 0x80) != 0;
@@ -93,8 +108,7 @@ void executeInstruction(CPU &cpu, uint8_t byte){
                 }
 
                 case 0b010: { // SUB A, r
-                    reg = registerFromByte( z, &regis );                   
-                    uint8_t val = *reg;
+                    uint8_t val = readRegOrHL(cpu, z);                  
                     uint16_t res = regis.A - val;
 
                     regis.F.S = (res & 0x80) != 0;
@@ -153,27 +167,27 @@ void executeInstruction(CPU &cpu, uint8_t byte){
                     break;
 
                 case 0b100: { // INC r
-                    reg = registerFromByte(y, &regis);
-                    uint8_t old = *reg;
-                    *reg += 1;
+                    uint8_t oldVal = readRegOrHL(cpu, y);
+                    uint8_t newVal = oldVal + 1;
+                    writeRegOrHL(cpu, y, newVal);
                     
                     regis.F.S = (*reg & 0x80) != 0;
                     regis.F.Z = (*reg == 0);
-                    regis.F.H = (old & 0x0F) == 0x0F;
-                    regis.F.PV = (old == 0x7F);
+                    regis.F.H = (oldVal & 0x0F) == 0x0F;
+                    regis.F.PV = (oldVal == 0x7F);
                     regis.F.N = false;
                     break;
                 }
 
                 case 0b101: { // DEC r
-                    reg = registerFromByte(y, &regis);
-                    uint8_t old = *reg;
-                    *reg -= 1;
+                    uint8_t oldVal = readRegOrHL(cpu, y);
+                    uint8_t newVal = oldVal - 1;
+                    writeRegOrHL(cpu, y, newVal);
 
                     regis.F.S = (*reg & 0x80) != 0;
                     regis.F.Z = (*reg == 0);
-                    regis.F.H = (old & 0x0F) == 0x00;
-                    regis.F.PV = (old == 0x80);
+                    regis.F.H = (oldVal & 0x0F) == 0x00;
+                    regis.F.PV = (oldVal == 0x80);
                     regis.F.N = true;
                     break;
                 }

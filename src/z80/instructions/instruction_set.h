@@ -48,3 +48,6 @@ bool checkOverflowAdd( uint8_t a, uint8_t value, uint16_t res );
  * @return True se houve overflow
  */
 bool checkOverflowSub( uint8_t a, uint8_t value, uint16_t res );
+
+uint8_t readRegOrHL(CPU& cpu, uint8_t index);
+void writeRegOrHL(CPU& cpu, uint8_t index, uint8_t value);
