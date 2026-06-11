@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
-#include "macro_context.hpp"
+#include "macro_context.h"
 
 /**
  * @brief Responsável pela segunda passagem do processador de macros.
@@ -33,7 +33,7 @@ private:
      * @param skeletonLine Uma linha retirada da MDT (Tabela de Definição).
      * @return Linha processada pronta para o arquivo de saída.
      */
-    std::string expandLine(const std::string& skeletonLine);
+    std::string expandLine(const std::string& skeletonLine, const std::string& currentSerial);
 
 public:
     PassTwo() : currentState(State::NORMAL), serialCounter(0) {}

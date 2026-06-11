@@ -14,4 +14,7 @@ namespace Utils {
 
     // Verifica limites de palavras para evitar que a substituição de &A afete &AB
     std::string replaceToken(const std::string& source, const std::string& target, const std::string& replacement);
+
+    // Nova função global para ler a linha assembly corretamente
+    void parseAssemblyLine(const std::string& line, std::string& label, std::string& opcode, std::string& operands);
 }

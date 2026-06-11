@@ -1,5 +1,5 @@
-#include "pass_two.hpp"
-#include "utils.hpp"
+#include "pass_two.h"
+#include "utils.h"
 #include <fstream>
 #include <sstream>
 
@@ -9,38 +9,42 @@ bool PassTwo::execute(std::istream& intermediateInput, std::ostream& finalOutput
 
     while (std::getline(intermediateInput, line)) {
         // Remove comentários e espaços para facilitar o parsing
-        std::string cleanLine = Utils::trim(Utils::stripComments(line));
-        if (cleanLine.empty()) {
+        std::string cleanLine = Utils::stripComments(line);
+        if (Utils::trim(cleanLine).empty()) {
             if (currentState == State::NORMAL) finalOutput << "\n";
             continue;
         }
 
         // Tokenização básica para identificar se a linha é uma chamada de macro
-        std::stringstream ss(cleanLine);
-        std::string firstToken, remaining;
-        ss >> firstToken;
-        std::getline(ss, remaining);
-        remaining = Utils::trim(remaining);
+        std::string label, opcode, operands;
+        Utils::parseAssemblyLine(cleanLine, label, opcode, operands);
 
         if (currentState == State::NORMAL) {
-            // Verifica se o mnemônico está na MNT (é uma chamada de macro?)
-            if (ctx.macroTable.find(firstToken) != ctx.macroTable.end()) {
+            // Verifica se a instrução é uma chamada de macro
+            if (!opcode.empty() && ctx.macroTable.find(opcode) != ctx.macroTable.end()) {
                 currentState = State::EXPANSION;
                 
-                // 1. Constrói a ALA (Argument List Array) para esta expansão
-                buildALA(remaining);
-
-                // 2. Expande o corpo da macro contido na MDT
-                const auto& macroEntry = ctx.macroTable.at(firstToken);
-                for (const auto& skeletonLine : macroEntry.definition.lines) {
-                    finalOutput << expandLine(skeletonLine) << "\n";
+                // Se o usuário chamou a macro com rótulo, salva o rótulo
+                if (!label.empty()) {
+                    finalOutput << label << ":\n"; 
                 }
 
-                // 3. Retorna ao estado normal após expansão
+                buildALA(operands);
+                const auto& macroEntry = ctx.macroTable.at(opcode);
+
+                // Calcula o .SER uma vez para toda a macro
+                std::string currentSerial = std::to_string(++serialCounter);
+                while (currentSerial.length() < 3) currentSerial = "0" + currentSerial; // 001
+
+                // Expande o esqueleto
+                for (const auto& skeletonLine : macroEntry.definition.lines) {
+                    finalOutput << expandLine(skeletonLine, currentSerial) << "\n";
+                }
+
                 currentState = State::NORMAL;
                 ala.clear();
             } else {
-                // Não é macro, copia para a saída final
+                // Não é macro, copia a linha limpa original
                 finalOutput << line << "\n";
             }
         }
@@ -52,27 +56,21 @@ void PassTwo::buildALA(const std::string& operandsPart) {
     ala = Utils::splitOperands(operandsPart, ',');
 }
 
-std::string PassTwo::expandLine(const std::string& skeletonLine) {
+std::string PassTwo::expandLine(const std::string& skeletonLine, const std::string& currentSerial) {
     std::string expandedLine = skeletonLine;
 
     // Substituição dos marcadores posicionais #1, #2, ... pelos argumentos da ALA
     for (size_t i = 0; i < ala.size(); ++i) {
         std::string target = "#" + std::to_string(i + 1);
-        
+
         // Substitui todas as ocorrências de #i pelo argumento ala[i]
-        // Usamos replaceToken para garantir que tokens como #10 não sejam 
-        // confundidos com #1 seguido de '0'
+        // replaceToken para garantir que tokens como #10 não sejam confundidos com #1 seguido de '0'
         expandedLine = Utils::replaceToken(expandedLine, target, ala[i]);
     }
 
-    // Processamento de rótulos serializados (ex: .SER)
-    // Se a macro contiver um marcador de label serializado, substituímos pelo contador
+    // 2. Substitui o .SER usando a string já calculada, sem incrementar
     if (expandedLine.find(".SER") != std::string::npos) {
-        std::string serial = std::to_string(++serialCounter);
-        // Garante formatação com zero à esquerda (ex: 1 -> 001)
-        while (serial.length() < 3) serial = "0" + serial;
-        
-        expandedLine = Utils::replaceToken(expandedLine, ".SER", serial);
+        expandedLine = Utils::replaceToken(expandedLine, ".SER", currentSerial);
     }
 
     return expandedLine;

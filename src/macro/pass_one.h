@@ -2,7 +2,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
-#include "macro_context.hpp"
+#include "macro_context.h"
 
 class PassOne {
 private:

@@ -1,49 +1,7 @@
-#include "pass_one.hpp"
-#include "utils.hpp" // Assumindo que você declarou as funções em namespace Utils
+#include "pass_one.h"
+#include "utils.h"
 #include <sstream>
 #include <cctype>
-
-// Função auxiliar interna para separar Rótulo, Instrução e Operandos
-// Uma regra clássica de montadores: se o primeiro caractere não é espaço, é um rótulo.
-static void parseAssemblyLine(const std::string& line, std::string& label, std::string& opcode, std::string& operands) {
-    label.clear();
-    opcode.clear();
-    operands.clear();
-
-    if (line.empty()) return;
-
-    size_t pos = 0;
-
-    // 1. Extrai o Rótulo (se houver)
-    if (!std::isspace(line[0])) {
-        size_t endLabel = line.find_first_of(" \t");
-        label = line.substr(0, endLabel);
-        pos = endLabel;
-    }
-
-    // 2. Extrai o Opcode (Instrução)
-    if (pos != std::string::npos) {
-        size_t startOpcode = line.find_first_not_of(" \t", pos);
-        if (startOpcode != std::string::npos) {
-            size_t endOpcode = line.find_first_of(" \t", startOpcode);
-            opcode = line.substr(startOpcode, endOpcode - startOpcode);
-            pos = endOpcode;
-        } else {
-            pos = std::string::npos;
-        }
-    }
-
-    // 3. Extrai os Operandos
-    if (pos != std::string::npos) {
-        size_t startOperands = line.find_first_not_of(" \t", pos);
-        if (startOperands != std::string::npos) {
-            operands = Utils::trim(line.substr(startOperands));
-        }
-    }
-
-    // Normaliza o opcode para maiúsculas para evitar erros de case sensitivity (ex: "Macro" vs "MACRO")
-    opcode = Utils::toUpperCase(opcode);
-}
 
 bool PassOne::execute(std::istream& input, std::ostream& intermediateOutput, MacroContext& ctx) {
     std::string rawLine;
@@ -51,11 +9,11 @@ bool PassOne::execute(std::istream& input, std::ostream& intermediateOutput, Mac
 
     while (std::getline(input, rawLine)) {
         // Remove comentários e espaços excedentes nas pontas
-        std::string cleanLine = Utils::trim(Utils::stripComments(rawLine));
+        std::string cleanLine = Utils::stripComments(rawLine);
         
-        // Linhas em branco pufas (após remover comentários) podem ser ignoradas
-        if (cleanLine.empty()) {
-            // Opcional: imprimir a linha vazia no intermediário para manter numeração de linhas
+        // Linhas em branco (após remover comentários) podem ser ignoradas
+        if (Utils::trim(cleanLine).empty()) {
+            // imprime a linha vazia no intermediário para manter numeração de linhas
             if (currentState == State::NORMAL) {
                 intermediateOutput << "\n";
             }
@@ -63,11 +21,11 @@ bool PassOne::execute(std::istream& input, std::ostream& intermediateOutput, Mac
         }
 
         std::string label, opcode, operands;
-        parseAssemblyLine(cleanLine, label, opcode, operands);
+        Utils::parseAssemblyLine(cleanLine, label, opcode, operands);
 
         if (currentState == State::NORMAL) {
             if (opcode == "MACRO") {
-                // Validação de sintaxe crítica: Uma macro precisa de um nome (rótulo)
+                // Validação de sintaxe: macro precisa de um nome (rótulo)
                 if (label.empty()) {
                     std::cerr << "[Erro - Passo 1] Definicao de macro sem rotulo.\n";
                     return false; 
@@ -91,7 +49,7 @@ bool PassOne::execute(std::istream& input, std::ostream& intermediateOutput, Mac
             }
         } 
         else if (currentState == State::DEFINITION) {
-            if (opcode == "ENDM") {
+            if (opcode == "ENDM" || label == "ENDM") {
                 // Fim da definição, retorna ao modo de cópia (NORMAL)
                 currentState = State::NORMAL;
                 currentMacroName.clear();
@@ -139,7 +97,7 @@ std::string PassOne::replaceFormalWithPositional(const std::string& line, const 
         // O marcador posicional será #1, #2, #3...
         std::string replacement = "#" + std::to_string(i + 1);
 
-        // O replaceToken DEVE verificar word boundaries para não substituir "&AB" ao procurar por "&A"
+        // O replaceToken verifica word boundaries para não substituir "&AB" ao procurar por "&A"
         result = Utils::replaceToken(result, target, replacement);
     }
 

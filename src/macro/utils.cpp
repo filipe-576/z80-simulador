@@ -1,4 +1,4 @@
-#include "utils.hpp"
+#include "utils.h"
 #include <algorithm>
 #include <cctype>
 
@@ -110,6 +110,49 @@ namespace Utils {
         }
 
         return result;
+    }
+
+    // Função auxiliar interna para separar Rótulo, Instrução e Operandos
+    // Uma regra clássica de montadores: se o primeiro caractere não é espaço, é um rótulo.
+    void parseAssemblyLine(const std::string& line, std::string& label, std::string& opcode, std::string& operands) {
+        label.clear();
+        opcode.clear();
+        operands.clear();
+
+        if (line.empty()) return;
+
+        size_t pos = 0;
+
+        // 1. Extrai o Rótulo (se houver)
+        if (!std::isspace(line[0])) {
+            size_t endLabel = line.find_first_of(" \t");
+            label = line.substr(0, endLabel);
+            pos = endLabel;
+        }
+
+        // 2. Extrai o Opcode (Instrução)
+        if (pos != std::string::npos) {
+            size_t startOpcode = line.find_first_not_of(" \t", pos);
+            if (startOpcode != std::string::npos) {
+                size_t endOpcode = line.find_first_of(" \t", startOpcode);
+                opcode = line.substr(startOpcode, endOpcode - startOpcode);
+                pos = endOpcode;
+            } else {
+                pos = std::string::npos;
+            }
+        }
+
+        // 3. Extrai os Operandos
+        if (pos != std::string::npos) {
+            size_t startOperands = line.find_first_not_of(" \t", pos);
+            if (startOperands != std::string::npos) {
+                operands = Utils::trim(line.substr(startOperands));
+            }
+        }
+
+        // Normalização para evitar erros de case sensitivity (ex: "Macro" vs "MACRO")
+        opcode = Utils::toUpperCase(opcode);
+        label = Utils::toUpperCase(label);
     }
 
 } // namespace Utils
