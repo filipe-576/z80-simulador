@@ -34,6 +34,7 @@ add_executable(z80-simulador
     src/z80/instructions/instruction_set.cpp
     src/z80/gui/gui.cpp
     ${IMGUI_SOURCES}
+    src/z80/gui/log.cpp
 )
 
 target_include_directories(z80-simulador PRIVATE

@@ -7,6 +7,7 @@
 // - Documentation        https://dearimgui.com/docs (same as your local docs/ folder).
 // - Introduction, links and more at the top of imgui.cpp
 #include "../memory/memory.h"
+#include "log.cpp"
 #include "gui.h"
 #include "imgui.h"
 #include "imgui_memory_editor.h"
@@ -78,7 +79,7 @@ int GUI::run_interface(Memory &mem)
 
     // Create window with graphics context
     float main_scale = ImGui_ImplGlfw_GetContentScaleForMonitor(glfwGetPrimaryMonitor()); // Valid on GLFW 3.3+ only
-    GLFWwindow *window = glfwCreateWindow((int)(1280 * main_scale), (int)(800 * main_scale), "Dear ImGui GLFW+OpenGL3 example", nullptr, nullptr);
+    GLFWwindow *window = glfwCreateWindow((int)(1360 * main_scale), (int)(768 * main_scale), "Z80 Emulator", nullptr, nullptr);
     if (window == nullptr)
         return 1;
     glfwMakeContextCurrent(window);
@@ -91,10 +92,10 @@ int GUI::run_interface(Memory &mem)
     (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;     // Enable Docking
-    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;   // Enable Multi-Viewport / Platform Windows
-    // io.ConfigViewportsNoAutoMerge = true;
-    // io.ConfigViewportsNoTaskBarIcon = true;
+    //  io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;     // Enable Docking
+    //  io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;   // Enable Multi-Viewport / Platform Windows
+    //  io.ConfigViewportsNoAutoMerge = true;
+    //  io.ConfigViewportsNoTaskBarIcon = true;
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
@@ -143,9 +144,20 @@ int GUI::run_interface(Memory &mem)
     // IM_ASSERT(font != nullptr);
 
     // Our state
-    bool show_demo_window = true;
-    bool show_another_window = false;
+    bool show_demo_window = false;
+    static AppLog log;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+    static bool mostrar_editor = false;
+    static bool mostrar_macro = false;
+    static bool mostrar_montador = false;
+    static bool mostrar_ligador = false;
+    static bool mostrar_debug = false;
+
+    ImGuiWindowFlags flags_travadas = ImGuiWindowFlags_NoMove |
+                                      ImGuiWindowFlags_NoResize |
+                                      ImGuiWindowFlags_NoCollapse |
+                                      ImGuiWindowFlags_NoTitleBar |
+                                      ImGuiWindowFlags_NoScrollbar;
 
     // Main loop
 #ifdef __EMSCRIPTEN__
@@ -158,11 +170,6 @@ int GUI::run_interface(Memory &mem)
 
 #endif
     {
-        // Poll and handle events (inputs, window resize, etc.)
-        // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
-        // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
-        // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
-        // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
         glfwPollEvents();
         if (glfwGetWindowAttrib(window, GLFW_ICONIFIED) != 0)
         {
@@ -170,49 +177,111 @@ int GUI::run_interface(Memory &mem)
             continue;
         }
 
+        // Pega dimensões atuais para garantir que as janelas ocupem todo o espaço (tiling)
+        ImGuiViewport *viewport = ImGui::GetMainViewport();
+        float total_X = viewport->WorkSize.x;
+        float total_Y = viewport->WorkSize.y;
+        float inicio_X = viewport->WorkPos.x;
+        float inicio_Y = viewport->WorkPos.y;
+
+        // Define as proporções dinamicamente baseadas no tamanho atual
+        float largura_esquerda = total_X * 0.58f;
+        float largura_direita = total_X * 0.42f;
+        float altura_topo = total_Y * 0.70f;
+        float altura_fundo = total_Y * 0.30f;
+
         // Start the Dear ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        mem_edit.DrawWindow("Memory Editor", mem.Outro_get_array(), 0x10000);
-
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
         if (show_demo_window)
             ImGui::ShowDemoWindow(&show_demo_window);
 
-        // 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
+        // Janela Principal (Editor e Menus)
+        ImGui::SetNextWindowPos(ImVec2(inicio_X, inicio_Y), ImGuiCond_Always);
+        ImGui::SetNextWindowSize(ImVec2(largura_esquerda, altura_topo), ImGuiCond_Always);
+        ImGui::Begin("Principal", nullptr, flags_travadas);
+
+        ImGui::Checkbox("Demo Window", &show_demo_window);
+
+        if (ImGui::BeginTabBar("MinhasAbas", ImGuiTabBarFlags_None))
         {
-            static float f = 0.0f;
-            static int counter = 0;
 
-            ImGui::Begin("Hello, world!"); // Create a window called "Hello, world!" and append into it.
+            if (ImGui::BeginTabItem("Menu"))
+            {
+                ImGui::Text("Esta é a aba de Menu.");
+                if (ImGui::Button("Abrir arquivo"))
+                {
+                }
 
-            ImGui::Text("This is some useful text.");          // Display some text (you can use a format strings too)
-            ImGui::Checkbox("Demo Window", &show_demo_window); // Edit bools storing our window open/close state
-            ImGui::Checkbox("Another Window", &show_another_window);
+                if (ImGui::Button("Novo arquivo"))
+                {
+                    mostrar_editor = true;
+                }
 
-            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);             // Edit 1 float using a slider from 0.0f to 1.0f
-            ImGui::ColorEdit3("clear color", (float *)&clear_color); // Edit 3 floats representing a color
+                ImGui::EndTabItem();
+            }
+            if (ImGui::BeginTabItem("Editor", &mostrar_editor))
+            {
+                ImGui::Text("Esta é a aba de Edicão de arquivo!.");
 
-            if (ImGui::Button("Button")) // Buttons return true when clicked (most widgets return true when edited/activated)
-                counter++;
-            ImGui::SameLine();
-            ImGui::Text("counter = %d", counter);
+                ImGui::EndTabItem();
+            }
 
-            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-            ImGui::End();
+            if (ImGui::BeginTabItem("Macro", &mostrar_macro))
+            {
+                ImGui::Text("Esta é a aba Macro.");
+
+                ImGui::EndTabItem();
+            }
+
+            if (ImGui::BeginTabItem("Montador", &mostrar_montador))
+            {
+                ImGui::Text("Esta é a aba Montador.");
+
+                ImGui::EndTabItem();
+            }
+
+            if (ImGui::BeginTabItem("Ligador", &mostrar_ligador))
+            {
+                ImGui::Text("Esta é a aba Ligador.");
+
+                ImGui::EndTabItem();
+            }
+
+            if (ImGui::BeginTabItem("Rodando", &mostrar_debug))
+            {
+                ImGui::Text("Esta é a aba de debug.");
+
+                ImGui::EndTabItem();
+            }
+
+            ImGui::EndTabBar();
         }
+        ImGui::End();
 
-        // 3. Show another simple window.
-        if (show_another_window)
-        {
-            ImGui::Begin("Another Window", &show_another_window); // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-            ImGui::Text("Hello from another window!");
-            if (ImGui::Button("Close Me"))
-                show_another_window = false;
-            ImGui::End();
-        }
+        // Janela de Log (Abaixo da Principal)
+        ImGui::SetNextWindowPos(ImVec2(inicio_X, altura_topo + inicio_Y), ImGuiCond_Always);
+        ImGui::SetNextWindowSize(ImVec2(largura_esquerda, altura_fundo), ImGuiCond_Always);
+        ImGui::Begin("Example: Log", nullptr, flags_travadas);
+        ImGui::End(); // Truque de append para definir flags
+        log.Draw("Example: Log");
+
+        // Janela de Registradores (Lado Direito Superior)
+        ImGui::SetNextWindowPos(ImVec2(inicio_X + largura_esquerda, inicio_Y), ImGuiCond_Always);
+        ImGui::SetNextWindowSize(ImVec2(largura_direita, total_Y * 0.50f), ImGuiCond_Always);
+        ImGui::Begin("Registradores Z80", nullptr, flags_travadas);
+        ImGui::Text("A: 0x00 | B: 0x00 | PC: 0x0000");
+        ImGui::End();
+
+        // Editor de Memória (Lado Direito Inferior)
+        ImGui::SetNextWindowPos(ImVec2(inicio_X + largura_esquerda, inicio_Y + (total_Y * 0.50f)), ImGuiCond_Always);
+        ImGui::SetNextWindowSize(ImVec2(largura_direita, total_Y * 0.50f), ImGuiCond_Always);
+        ImGui::Begin("Memory Editor", nullptr, flags_travadas);
+        mem_edit.DrawContents(mem.Outro_get_array(), 0x10000); // Usa DrawContents para respeitar o tamanho do painel
+        ImGui::End();
 
         // Rendering
         ImGui::Render();
