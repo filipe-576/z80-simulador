@@ -126,28 +126,30 @@ void executeInstruction(CPU &cpu, uint8_t byte){
 
             break;
         case 0b01:
-            switch(y) {
-                case 0b110: // LD (HL), r ou HALT
+            if ( y == 0b110 && z == 0b110) { // HALT
+                cpu.setHalted(true);
+            }
 
-                    if (z == 0b110){ // HALT
-                        cpu.setHalted(true);
-                    }
-                    else{ // LD (HL), r
-                        uint16_t hl = regis.HL();
-                        reg = registerFromByte(z, &regis);
-                        cpu.mem.write(hl, *reg);
-                    }
-            } 
-            if (z == 0b110){ // LD r, (HL)
-               // 
+            else if ( y == 0b110 ) { // LD (HL), r
+                uint16_t hl = regis.HL();
+                reg = registerFromByte(z, &regis);
+                cpu.mem.write(hl, *reg);
+            }
+
+            else if ( z == 0b110 ) { // LD r, (HL)
+               uint16_t hl = regis.HL();
+               reg = registerFromByte(y, &regis);
+               *reg = cpu.mem.read(hl);
             }
 
             else { // LD r, r'
                 reg = registerFromByte(y, &regis);
                 reg2 = registerFromByte(z, &regis);
-                if (reg && reg2) *reg = *reg2;
-            }
 
+                if (reg && reg2) {
+                    *reg = *reg2;
+                }
+            }
             break;
 
         case 0b00:
