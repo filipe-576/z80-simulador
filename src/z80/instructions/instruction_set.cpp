@@ -1,20 +1,24 @@
 #include "instruction_set.h"
 #include "../cpu/cpu.h"
+#include <iostream>
+#include <bitset>
 
 bool getParity(uint8_t val);
 
 uint8_t* registerFromByte(uint8_t regIndex, Registers* registradores);
 
-void instrucao(CPU &cpu, uint8_t byte){
+void executeInstruction(CPU &cpu, uint8_t byte){
 
     Registers& regis = cpu.getRegisters();
 
     uint8_t op = (byte & 0b11000000) >> 6;
-
     uint8_t y = (byte & 0b00111000) >> 3;
-
     uint8_t z = (byte & 0b00000111);
 
+    std::cout << std::bitset<8>(op) << '\n';
+    std::cout << std::bitset<8>(y) << '\n';
+    std::cout << std::bitset<8>(z) << std::endl;
+    
     uint8_t* reg, *reg2;
 
     switch(op) {
@@ -243,10 +247,10 @@ uint8_t* registerFromByte(uint8_t regIndex, Registers* registradores){
     return (count % 2 == 0);
 }
 
-bool checkOverflowAdd( uint8_t a, uint8_t value, uint8_t res ) {
+bool checkOverflowAdd( uint8_t a, uint8_t value, uint16_t res ) {
     return ( (a ^ res) & (value ^ res) & 0x80 ) != 0;
 }
 
-bool checkOverflowSub( uint8_t a, uint8_t value, uint8_t res ) {
+bool checkOverflowSub( uint8_t a, uint8_t value, uint16_t res ) {
     return ( (a ^ value) & (a ^ res) & 0x80 ) != 0;
 }

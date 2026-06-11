@@ -31,7 +31,7 @@ void CPU::setHalted(bool value){
 void CPU::step(){
     uint8_t byte = fetch8();
 
-    instrucao(*this, byte);
+    executeInstruction(*this, byte);
 }
 
 

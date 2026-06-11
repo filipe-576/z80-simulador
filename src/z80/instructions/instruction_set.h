@@ -10,7 +10,7 @@
  * @param cpu
  * @param byte
  */
-void instrucao(CPU &cpu, uint8_t byte);
+void executeInstruction(CPU &cpu, uint8_t byte);
 
 /**
  * @brief Recebe o opcode e retorna uma referência do registrador correspondente
@@ -37,7 +37,7 @@ bool getParity(uint8_t val);
  * @param res Resultado da soma
  * @return True se houve overflow
  */
-bool checkOverflowAdd( uint8_t a, uint8_t value, uint8_t res );
+bool checkOverflowAdd( uint8_t a, uint8_t value, uint16_t res );
 
 /**
  * @brief Verifica overflow em operações de subtração
@@ -47,4 +47,4 @@ bool checkOverflowAdd( uint8_t a, uint8_t value, uint8_t res );
  * @param res Resultado da subtração
  * @return True se houve overflow
  */
-bool checkOverflowSub( uint8_t a, uint8_t value, uint8_t res );
+bool checkOverflowSub( uint8_t a, uint8_t value, uint16_t res );
