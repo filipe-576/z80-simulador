@@ -48,4 +48,8 @@ private:
 
     int findTable(std::string label);
 
+    bool isPseudoInstruction(std::string label);
+
+    bool isMachineInstruction(std::string label);
+
 };

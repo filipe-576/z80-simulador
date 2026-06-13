@@ -1,7 +1,5 @@
 #include "assembler.h"
-#include <algorithm>
 #include <cstddef>
-#include <exception>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -22,10 +20,12 @@ void Assembler::loadFile(){
     }
 }
 
+
 void Assembler::assemble(){
     firstPass();
     // secondPass();
 }
+
 
 void Assembler::firstPass(){
     locationCounter = 0;
@@ -37,12 +37,6 @@ void Assembler::firstPass(){
         std::vector<std::string> tokenizedInstruction = tokenizeInstruction(instruction);
         if( tokenizedInstruction.empty() ) continue;
 
-        // debug
-        // for( auto const &i: tokenizedInstruction ){
-        //     std::cout << i << std::endl;
-        // }
-        // std::cout << std::endl;
-
         label = getLabel(tokenizedInstruction);
 
         opcode = getOpcode(tokenizedInstruction);
@@ -53,18 +47,16 @@ void Assembler::firstPass(){
             operand = "";
         }
 
-        if( PSEUDO_INSTRUCTIONS.find(opcode) != PSEUDO_INSTRUCTIONS.end() ){
+        if( isPseudoInstruction(opcode) ){
             if( opcode == "ORG" ){
                 locationCounter = getOperandValue(operand);
-            }
-            else if( opcode == "END" ){
+                length = 0;
+            } else if( opcode == "END" ){
                 return;
-            }
-            else if( opcode == "EQU" ){
+            } else if( opcode == "EQU" ){
                 value = getOperandValue(operand);
                 length = 0;
-            } 
-            else {
+            } else {
                 value = locationCounter;
                 length = getInstructionSize(tokenizedInstruction);
             }
@@ -74,7 +66,7 @@ void Assembler::firstPass(){
             }
             locationCounter += length;
         }
-        else if( MACHINE_INSTRUCTIONS.find(opcode) != MACHINE_INSTRUCTIONS.end() ){
+        else if( isMachineInstruction(opcode) ){
             length = getInstructionSize(tokenizedInstruction);
             if( !label.empty() ){
                 insertTable(label, locationCounter);
@@ -87,13 +79,16 @@ void Assembler::firstPass(){
     }
 }
 
+
 unsigned int Assembler::getInstructionSize(std::vector<std::string> instruction){
     return 1;
 }
 
+
 void Assembler::insertTable(std::string label, unsigned int value){
     symbolTable.insert({label, value});
 }
+
 
 unsigned int Assembler::getOperandValue(std::string operand){
     if( operand[0] == '@' ){
@@ -104,10 +99,27 @@ unsigned int Assembler::getOperandValue(std::string operand){
 
 }
 
+
 int Assembler::findTable(std::string label){
     if( symbolTable.find(label) == symbolTable.end() ) return -1;
     return symbolTable.at(label);
 }
+
+bool Assembler::isPseudoInstruction(std::string label){
+    if( PSEUDO_INSTRUCTIONS.find(label) != PSEUDO_INSTRUCTIONS.end() ){
+        return true;
+    }
+    return false;
+}
+
+
+bool Assembler::isMachineInstruction(std::string label){
+    if( MACHINE_INSTRUCTIONS.find(label) != MACHINE_INSTRUCTIONS.end() ){
+        return true;
+    }
+    return false;
+}
+
 
 std::string Assembler::getOperand(std::vector<std::string> instruction, unsigned short index){
     if( instruction.size() == 0 ) return "";
@@ -115,8 +127,7 @@ std::string Assembler::getOperand(std::vector<std::string> instruction, unsigned
 
     size_t i;
     for( i = 0; i < instruction.size(); i++ ){
-        if( PSEUDO_INSTRUCTIONS.find(instruction[i]) != PSEUDO_INSTRUCTIONS.end() ||
-        MACHINE_INSTRUCTIONS.find(instruction[i]) != MACHINE_INSTRUCTIONS.end() ){
+        if( isPseudoInstruction(instruction[i]) || isMachineInstruction(instruction[i])){
             break;
         }
     }
@@ -124,12 +135,12 @@ std::string Assembler::getOperand(std::vector<std::string> instruction, unsigned
     return instruction[i + 1 + index];
 }
 
+
 std::string Assembler::getLabel(std::vector<std::string> instruction){
 
     for( size_t i = 0; i < instruction.size(); i++ ){
 
-        if( PSEUDO_INSTRUCTIONS.find(instruction[i]) == PSEUDO_INSTRUCTIONS.end() &&
-        MACHINE_INSTRUCTIONS.find(instruction[i]) == MACHINE_INSTRUCTIONS.end() ){
+        if( !isPseudoInstruction(instruction[i]) && !isMachineInstruction(instruction[i])){
             continue;
         }
 
@@ -140,16 +151,17 @@ std::string Assembler::getLabel(std::vector<std::string> instruction){
     return "";
 }
 
+
 std::string Assembler::getOpcode(std::vector<std::string> instruction){
     for( size_t i = 0; i < instruction.size(); i++ ){
 
-        if( PSEUDO_INSTRUCTIONS.find(instruction[i]) != PSEUDO_INSTRUCTIONS.end() ||
-        MACHINE_INSTRUCTIONS.find(instruction[i]) != MACHINE_INSTRUCTIONS.end() ){
+        if( isPseudoInstruction(instruction[i]) || isMachineInstruction(instruction[i])){
             return instruction[i];
         }
     }
     return "";
 }
+
 
 std::vector<std::string> Assembler::tokenizeInstruction(std::string instruction){
     std::vector<std::string> elements;
@@ -173,6 +185,7 @@ std::vector<std::string> Assembler::tokenizeInstruction(std::string instruction)
     return elements;
 }
 
+
 void Assembler::debug(){
     std::cout << "Código" << std::endl;
     for( std::string line: program ){
@@ -181,6 +194,6 @@ void Assembler::debug(){
 
     std::cout << "Tabela de símbolos:" << std::endl;
     for( auto it = symbolTable.begin(); it != symbolTable.end(); it++ ){
-        std::cout << it->first << " " << it->second << std::endl;
+        std::cout << it->first << "\t\t" << it->second << std::endl;
     }
 }
