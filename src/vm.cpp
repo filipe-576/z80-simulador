@@ -33,13 +33,15 @@ int main(){
     Memory mem;
     CPU cpu(mem);
     GUI gui;
-    gui.run_interface(mem);
+
 
 
     std::vector<uint8_t> program = getProgram(fileName);
 
     mem.load(program.data(), program.size());
 
+    gui.run_interface(mem,cpu);
+    /*
     while( !cpu.isHalted() ){
         cpu.step();
         Registers& regis = cpu.getRegisters();
@@ -53,5 +55,5 @@ int main(){
 
         std::cin.get();
 
-    }
+    }*/
 }

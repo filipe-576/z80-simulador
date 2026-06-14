@@ -7,6 +7,8 @@
 // - Documentation        https://dearimgui.com/docs (same as your local docs/ folder).
 // - Introduction, links and more at the top of imgui.cpp
 #include "../memory/memory.h"
+#include "../cpu/registers.h"
+#include "../cpu/cpu.h"
 #include "log.cpp"
 #include "gui.h"
 #include "imgui.h"
@@ -39,9 +41,11 @@ static void glfw_error_callback(int error, const char *description)
 
 #include "gui.h"
 static MemoryEditor mem_edit;
+static AppLog log;
+
 
 // Main code
-int GUI::run_interface(Memory &mem)
+int GUI::run_interface(Memory &mem, CPU &cpu)
 {
 
     glfwSetErrorCallback(glfw_error_callback);
@@ -176,7 +180,11 @@ int GUI::run_interface(Memory &mem)
             ImGui_ImplGlfw_Sleep(10);
             continue;
         }
-
+        
+        if (!cpu.isHalted())
+        {
+        cpu.step();
+        }
         // Pega dimensões atuais para garantir que as janelas ocupem todo o espaço (tiling)
         ImGuiViewport *viewport = ImGui::GetMainViewport();
         float total_X = viewport->WorkSize.x;
@@ -273,7 +281,35 @@ int GUI::run_interface(Memory &mem)
         ImGui::SetNextWindowPos(ImVec2(inicio_X + largura_esquerda, inicio_Y), ImGuiCond_Always);
         ImGui::SetNextWindowSize(ImVec2(largura_direita, total_Y * 0.50f), ImGuiCond_Always);
         ImGui::Begin("Registradores Z80", nullptr, flags_travadas);
-        ImGui::Text("A: 0x00 | B: 0x00 | PC: 0x0000");
+
+        Registers& regs = cpu.getRegisters();
+
+        ImGui::SeparatorText("Registradores");
+
+        ImGui::Text("A: %02X    B: %02X", regs.A, regs.B);
+        ImGui::Text("C: %02X    D: %02X", regs.C, regs.D);
+        ImGui::Text("E: %02X    H: %02X", regs.E, regs.H);
+        ImGui::Text("L: %02X", regs.L);
+
+        ImGui::Separator();
+
+        ImGui::Text("PC: %04X", regs.PC);
+        ImGui::Text("SP: %04X", regs.SP);
+        ImGui::Text("IX: %04X", regs.IX);
+        ImGui::Text("IY: %04X", regs.IY);
+
+        ImGui::SeparatorText("Flags");
+
+        ImGui::Text(
+            "S:%d  Z:%d  H:%d  PV:%d  N:%d  C:%d",
+            regs.F.S,
+            regs.F.Z,
+            regs.F.H,
+            regs.F.PV,
+            regs.F.N,
+            regs.F.C
+        );
+
         ImGui::End();
 
         // Editor de Memória (Lado Direito Inferior)
@@ -304,7 +340,7 @@ int GUI::run_interface(Memory &mem)
         }
 
         glfwSwapBuffers(window);
-    }
+    };
 #ifdef __EMSCRIPTEN__
     EMSCRIPTEN_MAINLOOP_END;
 #endif
