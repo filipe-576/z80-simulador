@@ -26,7 +26,7 @@ std::vector<uint8_t> getProgram(const std::string& fileName){
 
 int main(){
 
-    std::string fileName("src/program.bin");
+    std::string fileName("../src/program.bin");
 
     Memory mem;
     CPU cpu(mem);

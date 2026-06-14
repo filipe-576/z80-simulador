@@ -49,7 +49,7 @@ private:
 
     std::string getOperand(const std::vector<std::string>& instruction, unsigned short index=0);
 
-    unsigned int getOperandValue(const std::string& operand);
+    int getOperandValue(const std::string& operand);
 
 
 /** 

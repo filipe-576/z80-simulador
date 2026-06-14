@@ -87,15 +87,18 @@ unsigned int Assembler::getInstructionSize(const std::vector<std::string>& instr
 }
 
 
-
 void Assembler::insertInTable(const std::string& label, unsigned int value){
     symbolTable.insert({label, value});
 }
 
 
-unsigned int Assembler::getOperandValue(const std::string& operand){
-    if( !operand.empty() && operand[0] == '@' ){
-        return std::stoi(operand.substr(1));
+int Assembler::getOperandValue(const std::string& operand){
+    if( operand.empty() ) return -1;
+    
+    if( operand[0] == '@' ){        // Dec
+        return std::stoi(operand.substr(1), 0, 10);
+    } else if( operand[0] == '$' ){ // Hexa
+        return std::stoi(operand.substr(1), 0, 16);
     }
     return findInTable(operand);
 }
@@ -146,7 +149,6 @@ std::string Assembler::getOperand(const std::vector<std::string>& instruction, c
 
 
 std::string Assembler::getLabel(const std::vector<std::string>& instruction){
-
     for( size_t i = 0; i < instruction.size(); i++ ){
         if( isPseudoInstruction(instruction[i]) || isMachineInstruction(instruction[i])){
             if( i == 0 ) return "";
