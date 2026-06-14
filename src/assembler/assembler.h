@@ -9,6 +9,9 @@ class Assembler {
 public:
     Assembler(std::string fileName);
 
+/** 
+ * @brief   Executa os dois passos do montador e gera o arquivo objeto
+ */
     void assemble();   
     
     void debug();
@@ -32,6 +35,12 @@ private:
     
     void secondPass();
 
+/** 
+ * @brief   Tokeniza a string da instrução.
+ * Exemplo: "LD A, @1" retorna um vetor ["LD", "A", "@1"]
+ *
+ * @return  Vetor com os tokens da instrução 
+ */
     std::vector<std::string> tokenizeInstruction(std::string instruction);
 
     std::string getLabel(std::vector<std::string> instruction);
@@ -42,11 +51,20 @@ private:
 
     unsigned int getOperandValue(std::string operand);
 
+
+/** 
+ * @brief   Retorna o tamanho em bytes ocupado pela instrução.
+ */
     unsigned int getInstructionSize(std::vector<std::string> instruction);
 
     void insertTable(std::string label, unsigned int value);
 
-    int findTable(std::string label);
+
+/** 
+ * @brief   Retorna o valor associado ao símbolo na Tabela de Símbolos.
+ * Retorna -1 caso não encontre.
+ */
+    int findInTable(std::string label);
 
     bool isPseudoInstruction(std::string label);
 
