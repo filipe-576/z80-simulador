@@ -33,19 +33,14 @@ void Assembler::firstPass(){
     std::string label, opcode, operand;
     unsigned int length, value;
     
-    for( std::string instruction: program ){
-        std::vector<std::string> tokenizedInstruction = tokenizeInstruction(instruction);
-        if( tokenizedInstruction.empty() ) continue;
+    for( std::string instructionString: program ){
+        std::vector<std::string> instruction = tokenizeInstruction(instructionString);
+        if( instruction.empty() ) continue;
 
-        label = getLabel(tokenizedInstruction);
+        label = getLabel(instruction);
+        opcode = getOpcode(instruction);
+        operand = getOperand(instruction);
 
-        opcode = getOpcode(tokenizedInstruction);
-
-        if( !opcode.empty() && opcode != "NOP" && opcode != "HALT" ){
-            operand = getOperand(tokenizedInstruction);
-        } else{
-            operand = "";
-        }
 
         if( isPseudoInstruction(opcode) ){
             if( opcode == "ORG" ){
@@ -58,7 +53,7 @@ void Assembler::firstPass(){
                 length = 0;
             } else {
                 value = locationCounter;
-                length = getInstructionSize(tokenizedInstruction);
+                length = getInstructionSize(instruction);
             }
 
             if( !label.empty() ){
@@ -67,7 +62,7 @@ void Assembler::firstPass(){
             locationCounter += length;
         }
         else if( isMachineInstruction(opcode) ){
-            length = getInstructionSize(tokenizedInstruction);
+            length = getInstructionSize(instruction);
             if( !label.empty() ){
                 insertTable(label, locationCounter);
             }
@@ -81,6 +76,7 @@ void Assembler::firstPass(){
 
 
 unsigned int Assembler::getInstructionSize(std::vector<std::string> instruction){
+    // Não feito
     return 1;
 }
 
@@ -95,12 +91,12 @@ unsigned int Assembler::getOperandValue(std::string operand){
         operand.erase(0, 1);
         return std::stoi(operand);
     }
-    return findTable(operand);
+    return findInTable(operand);
 
 }
 
 
-int Assembler::findTable(std::string label){
+int Assembler::findInTable(std::string label){
     if( symbolTable.find(label) == symbolTable.end() ) return -1;
     return symbolTable.at(label);
 }
@@ -132,6 +128,9 @@ std::string Assembler::getOperand(std::vector<std::string> instruction, unsigned
         }
     }
 
+    if( instruction[i] == "NOP" || instruction[i] == "HALT" ){
+        return "";
+    }
     return instruction[i + 1 + index];
 }
 
