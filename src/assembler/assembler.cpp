@@ -6,7 +6,8 @@
 #include <stdexcept>
 #include <string>
 
-Assembler::Assembler(std::string fileName): fileName(fileName){
+
+Assembler::Assembler(const std::string& fileName): fileName(fileName){
     loadFile();
 }
 
@@ -41,7 +42,12 @@ void Assembler::firstPass(){
         opcode = getOpcode(instruction);
         operand = getOperand(instruction);
 
-
+        if( opcode.empty() ){
+            if( !label.empty() ){
+                insertInTable(label, locationCounter);
+            }
+            continue;
+        }
         if( isPseudoInstruction(opcode) ){
             if( opcode == "ORG" ){
                 locationCounter = getOperandValue(operand);
@@ -51,57 +57,57 @@ void Assembler::firstPass(){
             } else if( opcode == "EQU" ){
                 value = getOperandValue(operand);
                 length = 0;
-            } else {
+            } else { // "DS" ou "DC"
                 value = locationCounter;
                 length = getInstructionSize(instruction);
             }
 
             if( !label.empty() ){
-                insertTable(label, value);
+                insertInTable(label, value);
             }
             locationCounter += length;
         }
         else if( isMachineInstruction(opcode) ){
-            length = getInstructionSize(instruction);
             if( !label.empty() ){
-                insertTable(label, locationCounter);
+                insertInTable(label, locationCounter);
             }
+            length = getInstructionSize(instruction);
             locationCounter += length;
         } else{
-            throw std::string("Operador Inválido");
+            throw std::runtime_error("Operador Inválido: " + opcode);
         }
 
     }
 }
 
 
-unsigned int Assembler::getInstructionSize(std::vector<std::string> instruction){
+unsigned int Assembler::getInstructionSize(const std::vector<std::string>& instruction){
     // Não feito
     return 1;
 }
 
 
-void Assembler::insertTable(std::string label, unsigned int value){
+
+void Assembler::insertInTable(const std::string& label, unsigned int value){
     symbolTable.insert({label, value});
 }
 
 
-unsigned int Assembler::getOperandValue(std::string operand){
-    if( operand[0] == '@' ){
-        operand.erase(0, 1);
-        return std::stoi(operand);
+unsigned int Assembler::getOperandValue(const std::string& operand){
+    if( !operand.empty() && operand[0] == '@' ){
+        return std::stoi(operand.substr(1));
     }
     return findInTable(operand);
-
 }
 
 
-int Assembler::findInTable(std::string label){
+int Assembler::findInTable(const std::string& label){
     if( symbolTable.find(label) == symbolTable.end() ) return -1;
     return symbolTable.at(label);
 }
 
-bool Assembler::isPseudoInstruction(std::string label){
+
+bool Assembler::isPseudoInstruction(const std::string& label){
     if( PSEUDO_INSTRUCTIONS.find(label) != PSEUDO_INSTRUCTIONS.end() ){
         return true;
     }
@@ -109,7 +115,7 @@ bool Assembler::isPseudoInstruction(std::string label){
 }
 
 
-bool Assembler::isMachineInstruction(std::string label){
+bool Assembler::isMachineInstruction(const std::string& label){
     if( MACHINE_INSTRUCTIONS.find(label) != MACHINE_INSTRUCTIONS.end() ){
         return true;
     }
@@ -117,7 +123,7 @@ bool Assembler::isMachineInstruction(std::string label){
 }
 
 
-std::string Assembler::getOperand(std::vector<std::string> instruction, unsigned short index){
+std::string Assembler::getOperand(const std::vector<std::string>& instruction, const unsigned short index){
     if( instruction.size() == 0 ) return "";
     if( index > 1 ) throw std::invalid_argument("Índice inválido");
 
@@ -128,30 +134,31 @@ std::string Assembler::getOperand(std::vector<std::string> instruction, unsigned
         }
     }
 
-    if( instruction[i] == "NOP" || instruction[i] == "HALT" ){
+    if( instruction[i] == "NOP" || instruction[i] == "HALT" || instruction[i] == "RET" ){
         return "";
     }
+    if( i + 1 + index >= instruction.size() ){
+        return "";
+    }
+    
     return instruction[i + 1 + index];
 }
 
 
-std::string Assembler::getLabel(std::vector<std::string> instruction){
+std::string Assembler::getLabel(const std::vector<std::string>& instruction){
 
     for( size_t i = 0; i < instruction.size(); i++ ){
-
-        if( !isPseudoInstruction(instruction[i]) && !isMachineInstruction(instruction[i])){
-            continue;
+        if( isPseudoInstruction(instruction[i]) || isMachineInstruction(instruction[i])){
+            if( i == 0 ) return "";
+            return instruction[i-1];
         }
-
-        if( i == 0 ) return "";
-
-        return instruction[i-1];
     }
-    return "";
+    if (!instruction.empty()) return instruction[0];
+    return ""; 
 }
 
 
-std::string Assembler::getOpcode(std::vector<std::string> instruction){
+std::string Assembler::getOpcode(const std::vector<std::string>& instruction){
     for( size_t i = 0; i < instruction.size(); i++ ){
 
         if( isPseudoInstruction(instruction[i]) || isMachineInstruction(instruction[i])){
@@ -162,26 +169,27 @@ std::string Assembler::getOpcode(std::vector<std::string> instruction){
 }
 
 
-std::vector<std::string> Assembler::tokenizeInstruction(std::string instruction){
-    std::vector<std::string> elements;
-
-    std::stringstream ss(instruction);
+std::vector<std::string> Assembler::tokenizeInstruction(const std::string& instruction){
+    std::vector<std::string> tokenizedInstruction;
+    std::string rawInstruction(instruction);
     std::string token;
-    short int commaIndex;
 
-    while( ss >> token ){
-        if(token[0] == ';'){
+    for( int i = 0; i < rawInstruction.size(); ++i ){
+        char c = rawInstruction[i];
+        
+        if( c == ',' ) rawInstruction[i] = ' ';
+        if( c == ';' ){
+            rawInstruction.erase(i);
             break;
         }
-
-        commaIndex = token.find(',');
-        if ( commaIndex != -1 ){
-            token.erase(commaIndex);
-        }
-        elements.push_back(token);
     }
 
-    return elements;
+    std::stringstream ss(rawInstruction);
+    while( ss >> token ){
+        tokenizedInstruction.push_back(token);
+    }
+
+    return tokenizedInstruction;
 }
 
 

@@ -7,7 +7,7 @@
 
 class Assembler {
 public:
-    Assembler(std::string fileName);
+    Assembler(const std::string& fileName);
 
 /** 
  * @brief   Executa os dois passos do montador e gera o arquivo objeto
@@ -26,7 +26,7 @@ private:
         "CALL","RET", "PUSH", "POP", "NOP", "HALT"
     };
     const std::set<std::string> PSEUDO_INSTRUCTIONS = {
-        "ORG", "END", "EQU", "DS"
+        "ORG", "END", "EQU", "DS", "DC"
     };
 
     void loadFile();
@@ -41,33 +41,33 @@ private:
  *
  * @return  Vetor com os tokens da instrução 
  */
-    std::vector<std::string> tokenizeInstruction(std::string instruction);
+    std::vector<std::string> tokenizeInstruction(const std::string& instruction);
 
-    std::string getLabel(std::vector<std::string> instruction);
+    std::string getLabel(const std::vector<std::string>& instruction);
 
-    std::string getOpcode(std::vector<std::string> instruction);
+    std::string getOpcode(const std::vector<std::string>& instruction);
 
-    std::string getOperand(std::vector<std::string> instruction, unsigned short index=0);
+    std::string getOperand(const std::vector<std::string>& instruction, unsigned short index=0);
 
-    unsigned int getOperandValue(std::string operand);
+    unsigned int getOperandValue(const std::string& operand);
 
 
 /** 
  * @brief   Retorna o tamanho em bytes ocupado pela instrução.
  */
-    unsigned int getInstructionSize(std::vector<std::string> instruction);
+    unsigned int getInstructionSize(const std::vector<std::string>& instruction);
 
-    void insertTable(std::string label, unsigned int value);
+    void insertInTable(const std::string& label, unsigned int value);
 
 
 /** 
  * @brief   Retorna o valor associado ao símbolo na Tabela de Símbolos.
  * Retorna -1 caso não encontre.
  */
-    int findInTable(std::string label);
+    int findInTable(const std::string& label);
 
-    bool isPseudoInstruction(std::string label);
+    bool isPseudoInstruction(const std::string& label);
 
-    bool isMachineInstruction(std::string label);
+    bool isMachineInstruction(const std::string& label);
 
 };
