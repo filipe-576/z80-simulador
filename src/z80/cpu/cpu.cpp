@@ -8,7 +8,6 @@ CPU::CPU(Memory& memory): mem(memory){
 
 void CPU::reset(){
     regs.reset();
-    mem.reset();
     halted = false;
 }
 
