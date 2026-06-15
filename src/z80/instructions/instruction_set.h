@@ -1,9 +1,12 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 #include "../cpu/cpu.h"
 #include "../cpu/registers.h"
 
+
+std::string NomeUnicoDeFunçaoQNExiste(Memory& mem, uint16_t address);
 /**
  * @brief Decodifica um byte da memória e executa a instrução
  *
@@ -48,3 +51,4 @@ bool checkOverflowAdd( uint8_t a, uint8_t value, uint8_t res );
  * @return True se houve overflow
  */
 bool checkOverflowSub( uint8_t a, uint8_t value, uint8_t res );
+

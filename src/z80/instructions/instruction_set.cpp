@@ -1,5 +1,6 @@
 #include "instruction_set.h"
 #include "../cpu/cpu.h"
+#include <string>
 
 bool getParity(uint8_t val);
 
@@ -249,4 +250,63 @@ bool checkOverflowAdd( uint8_t a, uint8_t value, uint8_t res ) {
 
 bool checkOverflowSub( uint8_t a, uint8_t value, uint8_t res ) {
     return ( (a ^ value) & (a ^ res) & 0x80 ) != 0;
+}
+
+std::string NomeUnicoDeFunçaoQNExiste(Memory& mem, uint16_t address)
+{
+    uint8_t byte = mem.read(address);
+
+    uint8_t op = (byte & 0b11000000) >> 6;
+    uint8_t y  = (byte & 0b00111000) >> 3;
+    uint8_t z  = (byte & 0b00000111);
+
+    switch(op)
+    {
+        case 0b10:
+            switch(y)
+            {
+                case 0b000: return "ADD A,r";
+                case 0b010: return "SUB A,r";
+                case 0b100: return "AND r";
+                case 0b101: return "XOR r";
+                case 0b110: return "OR r";
+                case 0b111: return "CP r";
+            }
+            break;
+
+        case 0b01:
+            if (y == 0b110 && z == 0b110)
+                return "HALT";
+
+            return "LD r,r";
+
+        case 0b00:
+            if (y == 0 && z == 0)
+                return "NOP";
+
+            if (z == 0b110)
+                return "LD r,n";
+
+            if (z == 0b100)
+                return "INC r";
+
+            if (z == 0b101)
+                return "DEC r";
+
+            break;
+
+        case 0b11:
+            if (z == 0b011 && y == 0)
+                return "JP nn";
+
+            if (z == 0b001 && y == 1)
+                return "RET";
+
+            if (z == 0b101 && y == 1)
+                return "CALL nn";
+
+            break;
+    }
+
+    return "???";
 }

@@ -9,6 +9,7 @@
 #include "../memory/memory.h"
 #include "../cpu/registers.h"
 #include "../cpu/cpu.h"
+#include "../instructions/instruction_set.h"
 #include "log.cpp"
 #include "gui.h"
 #include "imgui.h"
@@ -16,6 +17,7 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include <stdio.h>
+#include <string>
 #define GL_SILENCE_DEPRECATION
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <GLES2/gl2.h>
@@ -261,11 +263,22 @@ int GUI::run_interface(Memory &mem, CPU &cpu)
 
         ImGui::SeparatorText("Registradores");
 
+        ImGui::Columns(2, nullptr, false);
+
         ImGui::Text("A: %02X    B: %02X", regs.A, regs.B);
         ImGui::Text("C: %02X    D: %02X", regs.C, regs.D);
         ImGui::Text("E: %02X    H: %02X", regs.E, regs.H);
         ImGui::Text("L: %02X", regs.L);
 
+        ImGui::NextColumn();
+
+        ImGui::Text("16 bit:");
+        ImGui::Text("AF: %04X", regs.AF());
+        ImGui::Text("BC: %04X", regs.BC());
+        ImGui::Text("DE: %04X", regs.DE());
+        ImGui::Text("HL: %04X", regs.HL());
+
+        ImGui::Columns(1);
         ImGui::Separator();
 
         ImGui::Text("PC: %04X", regs.PC);
@@ -304,7 +317,7 @@ int GUI::run_interface(Memory &mem, CPU &cpu)
         if (ImGui::Button("Avançar p/ proxima instrução"))
         {
             running = false;
-
+            cpu.mem.write(0x1000, 0x0F); 
             if (!cpu.isHalted())
             {
                 cpu.step();
@@ -320,13 +333,27 @@ int GUI::run_interface(Memory &mem, CPU &cpu)
         }
         
 
+
+        ImGui::SeparatorText("Proxima instrução");
+
+        uint16_t pc = regs.PC;
+        uint8_t opcode = mem.read(pc);
+
+        ImGui::Text("PC: %04X", pc);
+
+        std::string instrL = NomeUnicoDeFunçaoQNExiste(mem, pc);
+
+        ImGui::Text("Opcode: %02X", mem.read(pc));
+        ImGui::Text("%s", instrL.c_str());
+
+
         ImGui::End();
 
         // Editor de Memória (Lado Direito Inferior)
         ImGui::SetNextWindowPos(ImVec2(inicio_X + largura_esquerda, inicio_Y + (total_Y * 0.50f)), ImGuiCond_Always);
         ImGui::SetNextWindowSize(ImVec2(largura_direita, total_Y * 0.50f), ImGuiCond_Always);
         ImGui::Begin("Memory Editor", nullptr, flags_travadas);
-        mem_edit.DrawContents(mem.Outro_get_array(), 0x10000); // Usa DrawContents para respeitar o tamanho do painel
+        mem_edit.DrawContents(mem.Outro_get_array(), 0x10000); 
         ImGui::End();
 
         // Rendering
