@@ -35,20 +35,6 @@ private:
     
     void secondPass();
 
-/** 
- * @brief   Tokeniza a string da instrução.
- * Exemplo: "LD A, @1" retorna um vetor ["LD", "A", "@1"]
- *
- * @return  Vetor com os tokens da instrução 
- */
-    std::vector<std::string> tokenizeInstruction(const std::string& instruction);
-
-    std::string getLabel(const std::vector<std::string>& instruction);
-
-    std::string getOpcode(const std::vector<std::string>& instruction);
-
-    std::string getOperand(const std::vector<std::string>& instruction, unsigned short index=0);
-
     int getOperandValue(const std::string& operand);
 
 
@@ -65,9 +51,5 @@ private:
  * Retorna -1 caso não encontre.
  */
     int findInTable(const std::string& label);
-
-    bool isPseudoInstruction(const std::string& label);
-
-    bool isMachineInstruction(const std::string& label);
 
 };

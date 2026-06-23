@@ -6,7 +6,7 @@ LIMIT       EQU     @5
 ; dados
             ORG     DATA_SEG
 COUNTER     DC      @1
-RESULT      DC      @1
+RESULT      DS      @1
 
 ; codigo
             ORG     CODE_SEG

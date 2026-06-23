@@ -1,7 +1,7 @@
 #include "assembler.h"
 
 int main(){
-    Assembler assemb = Assembler("../src/assembler/test.asm");
+    Assembler assemb = Assembler("z80-simulador/src/assembler/test.asm");
     assemb.assemble();
     assemb.debug();
 }

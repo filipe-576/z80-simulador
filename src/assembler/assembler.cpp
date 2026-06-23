@@ -2,9 +2,9 @@
 #include <cstddef>
 #include <fstream>
 #include <iostream>
-#include <sstream>
 #include <stdexcept>
 #include <string>
+#include "../utils.h"
 
 
 Assembler::Assembler(const std::string& fileName): fileName(fileName){
@@ -35,12 +35,12 @@ void Assembler::firstPass(){
     unsigned int length, value;
     
     for( std::string instructionString: program ){
-        std::vector<std::string> instruction = tokenizeInstruction(instructionString);
+        std::vector<std::string> instruction = utils::tokenizeInstruction(instructionString);
         if( instruction.empty() ) continue;
 
-        label = getLabel(instruction);
-        opcode = getOpcode(instruction);
-        operand = getOperand(instruction);
+        label = utils::getLabel(instruction);
+        opcode = utils::getOpcode(instruction);
+        operand = utils::getOperand(instruction);
 
         if( opcode.empty() ){
             if( !label.empty() ){
@@ -48,7 +48,7 @@ void Assembler::firstPass(){
             }
             continue;
         }
-        if( isPseudoInstruction(opcode) ){
+        if( utils::isPseudoInstruction(opcode) ){
             if( opcode == "ORG" ){
                 locationCounter = getOperandValue(operand);
                 length = 0;
@@ -67,7 +67,7 @@ void Assembler::firstPass(){
             }
             locationCounter += length;
         }
-        else if( isMachineInstruction(opcode) ){
+        else if( utils::isMachineInstruction(opcode) ){
             if( !label.empty() ){
                 insertInTable(label, locationCounter);
             }
@@ -82,7 +82,7 @@ void Assembler::firstPass(){
 
 
 unsigned int Assembler::getInstructionSize(const std::vector<std::string>& instruction){
-    std::string opcode = getOpcode(instruction);
+    std::string opcode = utils::getOpcode(instruction);
     if (opcode.empty()) return 0;
 
     // Pseudo-instruções
@@ -91,7 +91,7 @@ unsigned int Assembler::getInstructionSize(const std::vector<std::string>& instr
     }
     
     if (opcode == "DS") {
-        return getOperandValue(getOperand(instruction, 0));
+        return getOperandValue(utils::getOperand(instruction, 0));
     }
     
     if (opcode == "DC") {
@@ -117,8 +117,8 @@ unsigned int Assembler::getInstructionSize(const std::vector<std::string>& instr
         return 1;
     }
 
-    std::string op1 = getOperand(instruction, 0);
-    std::string op2 = getOperand(instruction, 1);
+    std::string op1 = utils::getOperand(instruction, 0);
+    std::string op2 = utils::getOperand(instruction, 1);
 
     auto isReg8 = [](const std::string& op) {
         return op == "A" || op == "B" || op == "C" || op == "D" || op == "E" || op == "H" || op == "L";
@@ -263,92 +263,6 @@ int Assembler::findInTable(const std::string& label){
     if( symbolTable.find(label) == symbolTable.end() ) return -1;
     return symbolTable.at(label);
 }
-
-
-bool Assembler::isPseudoInstruction(const std::string& label){
-    if( PSEUDO_INSTRUCTIONS.find(label) != PSEUDO_INSTRUCTIONS.end() ){
-        return true;
-    }
-    return false;
-}
-
-
-bool Assembler::isMachineInstruction(const std::string& label){
-    if( MACHINE_INSTRUCTIONS.find(label) != MACHINE_INSTRUCTIONS.end() ){
-        return true;
-    }
-    return false;
-}
-
-
-std::string Assembler::getOperand(const std::vector<std::string>& instruction, const unsigned short index){
-    if( instruction.size() == 0 ) return "";
-    if( index > 1 ) throw std::invalid_argument("Índice inválido");
-
-    size_t i;
-    for( i = 0; i < instruction.size(); i++ ){
-        if( isPseudoInstruction(instruction[i]) || isMachineInstruction(instruction[i])){
-            break;
-        }
-    }
-
-    if( instruction[i] == "NOP" || instruction[i] == "HALT" || instruction[i] == "RET" ){
-        return "";
-    }
-    if( i + 1 + index >= instruction.size() ){
-        return "";
-    }
-    
-    return instruction[i + 1 + index];
-}
-
-
-std::string Assembler::getLabel(const std::vector<std::string>& instruction){
-    for( size_t i = 0; i < instruction.size(); i++ ){
-        if( isPseudoInstruction(instruction[i]) || isMachineInstruction(instruction[i])){
-            if( i == 0 ) return "";
-            return instruction[i-1];
-        }
-    }
-    if (!instruction.empty()) return instruction[0];
-    return ""; 
-}
-
-
-std::string Assembler::getOpcode(const std::vector<std::string>& instruction){
-    for( size_t i = 0; i < instruction.size(); i++ ){
-
-        if( isPseudoInstruction(instruction[i]) || isMachineInstruction(instruction[i])){
-            return instruction[i];
-        }
-    }
-    return "";
-}
-
-
-std::vector<std::string> Assembler::tokenizeInstruction(const std::string& instruction){
-    std::vector<std::string> tokenizedInstruction;
-    std::string rawInstruction(instruction);
-    std::string token;
-
-    for( int i = 0; i < rawInstruction.size(); ++i ){
-        char c = rawInstruction[i];
-        
-        if( c == ',' ) rawInstruction[i] = ' ';
-        if( c == ';' ){
-            rawInstruction.erase(i);
-            break;
-        }
-    }
-
-    std::stringstream ss(rawInstruction);
-    while( ss >> token ){
-        tokenizedInstruction.push_back(token);
-    }
-
-    return tokenizedInstruction;
-}
-
 
 void Assembler::debug(){
     std::cout << "Código" << std::endl;

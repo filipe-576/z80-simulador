@@ -31,6 +31,7 @@ target_include_directories(z80-simulador PRIVATE
 add_executable(macro_processor
     src/macro/main.cpp
     src/macro/macro_processor.cpp
+    src/utils.cpp
 )
 
 target_include_directories(macro_processor PRIVATE
@@ -41,6 +42,7 @@ target_include_directories(macro_processor PRIVATE
 add_executable(assembler
     src/assembler/main.cpp
     src/assembler/assembler.cpp
+    src/utils.cpp
 )
 
 target_include_directories(assembler PRIVATE
@@ -51,6 +53,7 @@ target_include_directories(assembler PRIVATE
 add_executable(linker
     src/linker/main.cpp
     src/linker/linker.cpp
+    src/utils.cpp
 )
 
 target_include_directories(linker PRIVATE
