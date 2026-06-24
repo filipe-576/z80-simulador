@@ -28,11 +28,48 @@ void MacroProcessor::saveFile(const std::vector<std::string>& preprocessedProgra
     outputFile.close();
 }
 
+/*
+std::string MacroProcessor::getLabel(const std::vector<std::string>& instruction) {
+    if (instruction.empty()) {
+        return "";
+    }
+
+    return instruction[0];
+}
+
+std::string MacroProcessor::getOpcode(const std::vector<std::string>& instruction) {
+    if (instruction.empty()) {
+        return "";
+    }
+
+    for (size_t i = 0; i < instruction.size(); i++) {
+        if (instruction[i] == "MCDEFN" || instruction[i] == "MCEND") {
+            return instruction[i];
+        }
+    }
+
+    if (instruction.size() == 1) { // HALT, NOP, etc. (instruções sem label)
+        return instruction[0];
+    }
+
+    return instruction[1];
+}
+*/
+
 void MacroProcessor::process() {
     std::vector<std::string> preprocessedProgram;
 
     for (size_t i = 0; i < program.size(); i++) {
-        preprocessedProgram.insert(preprocessedProgram.end(), program[i]);
+        std::vector<std::string> tokens = utils::tokenizeInstruction(program[i]);
+
+        if (tokens.empty()) {
+            continue; // Ignora linhas vazias
+        }
+
+        std::string label = utils::getLabel(tokens, macroNames);
+        std::string opcode = utils::getOpcode(tokens, macroNames);
+
+        preprocessedProgram.insert(preprocessedProgram.end(), program[i]); // Alterar .insert() para .push_back() em todo código.
     }
 
     saveFile(preprocessedProgram);
