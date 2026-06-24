@@ -4,6 +4,7 @@
 #include <vector>
 #include <unordered_map>
 #include <set>
+#include <cstdint>
 #include "../utils.h"
 
 struct Macro {
@@ -27,4 +28,7 @@ private:
 
     void loadFile();
     void saveFile(const std::vector<std::string>& preprocessedProgram);
+
+    void replaceAll(std::string& str, const std::string& target, const std::string& replacement);
+    uint16_t serialCounter = 0;
 };
