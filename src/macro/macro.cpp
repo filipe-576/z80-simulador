@@ -3,11 +3,11 @@
 #include <iostream>
 
 // Proximas etapas:
-// 1. reconhecer a chamada de uma macro e colar as linhas do corpo dela na saída
-// 2. mapear e associar os parâmetros da macro. Por exemplo: associar "B" a "&REG"
-// 3. expansão da macro: fazer a substituição dos parâmetros
-// 4. macros aninhadas?
-// 5. ?
+// [x] 1. reconhecer a chamada de uma macro e colar as linhas do corpo dela na saída
+// [ ] 2. mapear e associar os parâmetros da macro. Por exemplo: associar "B" a "&REG"
+// [ ] 3. expansão da macro: fazer a substituição dos parâmetros
+// [ ] 4. macros aninhadas?
+// [ ] 5. ?
 
 MacroProcessor::MacroProcessor(const std::string& inputFileName, const std::string& outputFileName) {
     this->inputFileName = inputFileName;
@@ -55,7 +55,7 @@ void MacroProcessor::process() {
         std::string label = utils::getLabel(tokens, macroNames);
         std::string opcode = utils::getOpcode(tokens, macroNames);
 
-        // MODO DE EXPANSÃO:
+
         if (isMacro) {
             if (opcode == "MCDEFN") {
                 macroLevel++;
@@ -73,6 +73,7 @@ void MacroProcessor::process() {
                 }
                 continue;
 
+
             } else {
                 currentMacro.body.push_back(program[i]);
             }
@@ -80,20 +81,14 @@ void MacroProcessor::process() {
             continue;
         }
 
-        // MODO DE DEFINIÇÃO:
         if (opcode == "MCDEFN") {
             isMacro = true;
             macroLevel = 0;
 
-            currentMacro = Macro(); // Limpa a macro atual (de uma vez só) para não utilizar dados de uma macro anterior. Substitui:
-            // currentMacro.name = "";
-            // currentMacro.parameters.clear();
-            // currentMacro.body.clear();
+            currentMacro = Macro();
             currentMacro.name = label;
 
-            for (const std::string& token : tokens) { // (para cada token dentro de tokens) substitui:
-            // for (size_t i = 0; i < tokens.size(); i++) {
-                // std::string token = tokens[i];
+            for (const std::string& token : tokens) {
                 if (token[0] == '&') {
                     currentMacro.parameters.push_back(token);
                 }
@@ -102,8 +97,19 @@ void MacroProcessor::process() {
             continue;
         }
 
+        // MODO EXPANSÃO:
+        if (macroNames.find(opcode) != macroNames.end()) {
+
+            Macro expandMacro = MNT[opcode];
+            
+            for (size_t i = 0; i < expandMacro.body.size(); i++) {
+                std::string expandedLine = expandMacro.body[i];
+                preprocessedProgram.push_back(expandedLine);
+            }
+        }
+        
         // MODO NORMAL:
-        preprocessedProgram.insert(preprocessedProgram.end(), program[i]); // Alterar .insert() para .push_back() em todo código.
+        preprocessedProgram.push_back(program[i]);
     }
 
     saveFile(preprocessedProgram);
