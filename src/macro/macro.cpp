@@ -2,12 +2,15 @@
 #include <fstream>
 #include <iostream>
 
+// Falta a expansão das macros e a macroLevel para as definições aninhadas
+
 MacroProcessor::MacroProcessor(const std::string& inputFileName, const std::string& outputFileName) {
     this->inputFileName = inputFileName;
     this->outputFileName = outputFileName;
 
     loadFile();
 }
+
 
 void MacroProcessor::loadFile() {
     std::ifstream inputFile(inputFileName);
@@ -19,6 +22,7 @@ void MacroProcessor::loadFile() {
     inputFile.close();
 }
 
+
 void MacroProcessor::saveFile(const std::vector<std::string>& preprocessedProgram) {
     std::ofstream outputFile(outputFileName);
 
@@ -28,36 +32,12 @@ void MacroProcessor::saveFile(const std::vector<std::string>& preprocessedProgra
     outputFile.close();
 }
 
-/*
-std::string MacroProcessor::getLabel(const std::vector<std::string>& instruction) {
-    if (instruction.empty()) {
-        return "";
-    }
-
-    return instruction[0];
-}
-
-std::string MacroProcessor::getOpcode(const std::vector<std::string>& instruction) {
-    if (instruction.empty()) {
-        return "";
-    }
-
-    for (size_t i = 0; i < instruction.size(); i++) {
-        if (instruction[i] == "MCDEFN" || instruction[i] == "MCEND") {
-            return instruction[i];
-        }
-    }
-
-    if (instruction.size() == 1) { // HALT, NOP, etc. (instruções sem label)
-        return instruction[0];
-    }
-
-    return instruction[1];
-}
-*/
 
 void MacroProcessor::process() {
     std::vector<std::string> preprocessedProgram;
+
+    bool isMacro = false;
+    Macro currentMacro;
 
     for (size_t i = 0; i < program.size(); i++) {
         std::vector<std::string> tokens = utils::tokenizeInstruction(program[i]);
@@ -68,6 +48,41 @@ void MacroProcessor::process() {
 
         std::string label = utils::getLabel(tokens, macroNames);
         std::string opcode = utils::getOpcode(tokens, macroNames);
+
+        if (opcode == "MCDEFN") {
+            isMacro = true;
+
+            currentMacro = Macro(); // Limpa a macro atual para não utilizar dados de uma macro anterior de uma vez só
+            // currentMacro.name = "";
+            // currentMacro.parameters.clear();
+            // currentMacro.body.clear();
+            currentMacro.name = label;
+
+            for (const std::string& token : tokens) { // (para cada token dentro de tokens) substitui:
+            // for (size_t i = 0; i < tokens.size(); i++) {
+                // std::string token = tokens[i];
+                if (token[0] == '&') {
+                    currentMacro.parameters.push_back(token);
+                }
+            }
+
+            continue;
+        }
+
+        if (isMacro) {
+            if (opcode == "MCEND") {
+                isMacro = false;
+
+                MNT[currentMacro.name] = currentMacro;
+                macroNames.insert(currentMacro.name);
+
+                continue;
+            } else {
+                currentMacro.body.push_back(program[i]);
+            }
+
+            continue;
+        }
 
         preprocessedProgram.insert(preprocessedProgram.end(), program[i]); // Alterar .insert() para .push_back() em todo código.
     }
