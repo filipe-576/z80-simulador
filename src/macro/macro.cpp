@@ -2,7 +2,12 @@
 #include <fstream>
 #include <iostream>
 
-// Falta a expansão das macros e a macroLevel para as definições aninhadas
+// Proximas etapas:
+// 1. reconhecer a chamada de uma macro e colar as linhas do corpo dela na saída
+// 2. mapear e associar os parâmetros da macro. Por exemplo: associar "B" a "&REG"
+// 3. expansão da macro: fazer a substituição dos parâmetros
+// 4. macros aninhadas?
+// 5. ?
 
 MacroProcessor::MacroProcessor(const std::string& inputFileName, const std::string& outputFileName) {
     this->inputFileName = inputFileName;
@@ -37,6 +42,7 @@ void MacroProcessor::process() {
     std::vector<std::string> preprocessedProgram;
 
     bool isMacro = false;
+    int macroLevel = 0;
     Macro currentMacro;
 
     for (size_t i = 0; i < program.size(); i++) {
@@ -49,10 +55,37 @@ void MacroProcessor::process() {
         std::string label = utils::getLabel(tokens, macroNames);
         std::string opcode = utils::getOpcode(tokens, macroNames);
 
+        // MODO DE EXPANSÃO:
+        if (isMacro) {
+            if (opcode == "MCDEFN") {
+                macroLevel++;
+                currentMacro.body.push_back(program[i]);
+            }
+            else if (opcode == "MCEND") {
+                if (macroLevel > 0) {
+                    macroLevel--;
+                    currentMacro.body.push_back(program[i]);
+                } else {
+                    isMacro = false;
+
+                    MNT[currentMacro.name] = currentMacro;
+                    macroNames.insert(currentMacro.name);
+                }
+                continue;
+
+            } else {
+                currentMacro.body.push_back(program[i]);
+            }
+
+            continue;
+        }
+
+        // MODO DE DEFINIÇÃO:
         if (opcode == "MCDEFN") {
             isMacro = true;
+            macroLevel = 0;
 
-            currentMacro = Macro(); // Limpa a macro atual para não utilizar dados de uma macro anterior de uma vez só
+            currentMacro = Macro(); // Limpa a macro atual (de uma vez só) para não utilizar dados de uma macro anterior. Substitui:
             // currentMacro.name = "";
             // currentMacro.parameters.clear();
             // currentMacro.body.clear();
@@ -69,21 +102,7 @@ void MacroProcessor::process() {
             continue;
         }
 
-        if (isMacro) {
-            if (opcode == "MCEND") {
-                isMacro = false;
-
-                MNT[currentMacro.name] = currentMacro;
-                macroNames.insert(currentMacro.name);
-
-                continue;
-            } else {
-                currentMacro.body.push_back(program[i]);
-            }
-
-            continue;
-        }
-
+        // MODO NORMAL:
         preprocessedProgram.insert(preprocessedProgram.end(), program[i]); // Alterar .insert() para .push_back() em todo código.
     }
 

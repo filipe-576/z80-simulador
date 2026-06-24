@@ -1,12 +1,15 @@
-; Este e um arquivo de teste para o Analisador Lexico
-    ORG $0000 ; Define a origem do programa
+ORG $0000 
 
-MINHA_MACRO MCDEFN &REG
-    LD &REG, 10 ; Carrega 10 no registrador
-    INC &REG
+MACRO_EXTERNA MCDEFN &A
+    LD A, &A
+    
+    MACRO_INTERNA MCDEFN &B
+        INC &B
+    MCEND
+    
 MCEND
 
     LD A, 5
-    MINHA_MACRO B
+    MACRO_EXTERNA B
 
-    HALT ; Fim do programa
+    HALT
