@@ -38,7 +38,7 @@ void Memory::load(const uint8_t* data, int length)
 }
 
 
-const uint8_t* Memory::get_array() const
+const uint8_t* Memory::getArray() const
 {
     return mem.data();
 }

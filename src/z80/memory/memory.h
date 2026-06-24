@@ -47,7 +47,7 @@ public:
  *
  * @return  Ponteiro para a posição 0 da memória.
  */
-    const uint8_t* get_array() const;
+    const uint8_t* getArray() const;
     
 private:
     std::array<uint8_t, SIZE> mem;
