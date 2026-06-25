@@ -67,33 +67,37 @@ void MacroProcessor::process() {
 
         // MODO DEFINIÇÃO
         if (isMacro) {
+            // definiçao de macro interna
             if (opcode == "MCDEFN") {
+
                 macroLevel++;
                 std::string processedLine = currentLine;
+                
                 for (size_t j = 0; j < currentMacro.parameters.size(); j++) {
                     replaceAll(processedLine, currentMacro.parameters[j], "?" + std::to_string(j));
                 }
+                
                 currentMacro.body.push_back(processedLine);
-            }
-            else if (opcode == "MCEND") {
+            
+            } else if (opcode == "MCEND") {
+            
                 if (macroLevel > 0) {
                     macroLevel--;
-                    std::string processedLine = currentLine;
-                    for (size_t j = 0; j < currentMacro.parameters.size(); j++) {
-                        replaceAll(processedLine, currentMacro.parameters[j], "?" + std::to_string(j));
-                    }
                     currentMacro.body.push_back(processedLine);
                 } else {
                     isMacro = false;
                     MNT[currentMacro.name] = currentMacro;
                     macroNames.insert(currentMacro.name);
                 }
+            
             } else {
+            
                 std::string processedLine = currentLine;
                 for (size_t j = 0; j < currentMacro.parameters.size(); j++) {
                     replaceAll(processedLine, currentMacro.parameters[j], "?" + std::to_string(j));
                 }
                 currentMacro.body.push_back(processedLine);
+            
             }
             continue;
         }
@@ -161,6 +165,7 @@ void MacroProcessor::process() {
 
     saveFile(finalOutput);
 }
+
 
 void MacroProcessor::replaceAll(std::string& str, const std::string& target, const std::string& replacement) {
     if (target.empty()) return;
