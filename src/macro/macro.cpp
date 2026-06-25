@@ -1,6 +1,7 @@
 #include "macro.h"
 #include <fstream>
 #include <iostream>
+#include <deque>
 
 // Proximas etapas:
 // [x] 1. reconhecer a chamada de uma macro e colar as linhas do corpo dela na saída
@@ -39,19 +40,24 @@ void MacroProcessor::saveFile(const std::vector<std::string>& preprocessedProgra
 
 
 void MacroProcessor::process() {
-    std::vector<std::string> intermediateCode;
-
+    std::vector<std::string> finalOutput;
+    
+    // Fila contendo as linhas a serem processadas
+    std::deque<std::string> inputQueue(program.begin(), program.end());
+    
     bool isMacro = false;
     int macroLevel = 0;
     Macro currentMacro;
 
-    // === PASSO 1: Coleta de Definições ===
-    for (size_t i = 0; i < program.size(); i++) {
-        std::vector<std::string> tokens = utils::tokenizeInstruction(program[i]);
+    // Loop de única passagem que processa e expande dinamicamente
+    while (!inputQueue.empty()) {
+        std::string currentLine = inputQueue.front();
+        inputQueue.pop_front();
 
+        std::vector<std::string> tokens = utils::tokenizeInstruction(currentLine);
         if (tokens.empty()) {
             if (!isMacro) {
-                intermediateCode.push_back(program[i]);
+                finalOutput.push_back(currentLine);
             }
             continue;
         }
@@ -59,10 +65,11 @@ void MacroProcessor::process() {
         std::string label = utils::getLabel(tokens, macroNames);
         std::string opcode = utils::getOpcode(tokens, macroNames);
 
+        // MODO DEFINIÇÃO
         if (isMacro) {
             if (opcode == "MCDEFN") {
                 macroLevel++;
-                std::string processedLine = program[i];
+                std::string processedLine = currentLine;
                 for (size_t j = 0; j < currentMacro.parameters.size(); j++) {
                     replaceAll(processedLine, currentMacro.parameters[j], "?" + std::to_string(j));
                 }
@@ -71,7 +78,7 @@ void MacroProcessor::process() {
             else if (opcode == "MCEND") {
                 if (macroLevel > 0) {
                     macroLevel--;
-                    std::string processedLine = program[i];
+                    std::string processedLine = currentLine;
                     for (size_t j = 0; j < currentMacro.parameters.size(); j++) {
                         replaceAll(processedLine, currentMacro.parameters[j], "?" + std::to_string(j));
                     }
@@ -81,22 +88,20 @@ void MacroProcessor::process() {
                     MNT[currentMacro.name] = currentMacro;
                     macroNames.insert(currentMacro.name);
                 }
-                continue;
             } else {
-                std::string processedLine = program[i];
+                std::string processedLine = currentLine;
                 for (size_t j = 0; j < currentMacro.parameters.size(); j++) {
                     replaceAll(processedLine, currentMacro.parameters[j], "?" + std::to_string(j));
                 }
                 currentMacro.body.push_back(processedLine);
             }
-
             continue;
         }
 
+        // DETECTA NOVA MACRO
         if (opcode == "MCDEFN") {
             isMacro = true;
             macroLevel = 0;
-
             currentMacro = Macro();
             currentMacro.name = label;
             if (!currentMacro.name.empty() && currentMacro.name.back() == ':') {
@@ -108,81 +113,53 @@ void MacroProcessor::process() {
                     currentMacro.parameters.push_back(token);
                 }
             }
-
             continue;
         }
 
-        // MODO NORMAL (Fora da definição):
-        intermediateCode.push_back(program[i]);
-    }
+        // MODO EXPANSÃO: Chamada de Macro detectada
+        if (!opcode.empty() && macroNames.find(opcode) != macroNames.end()) {
+            serialCounter++;
+            Macro expandMacro = MNT[opcode];
 
-    // === PASSO 2: Expansão Iterativa ===
-    std::vector<std::string> expandedProgram = intermediateCode;
-    bool expandedAny = true;
-
-    while (expandedAny) {
-        expandedAny = false;
-        std::vector<std::string> passOutput;
-
-        for (size_t i = 0; i < expandedProgram.size(); i++) {
-            std::vector<std::string> tokens = utils::tokenizeInstruction(expandedProgram[i]);
-
-            if (tokens.empty()) {
-                passOutput.push_back(expandedProgram[i]);
-                continue;
+            // Coleta os argumentos reais da chamada
+            size_t opcodeIdx = 0;
+            for (size_t j = 0; j < tokens.size(); j++) {
+                if (tokens[j] == opcode) {
+                    opcodeIdx = j;
+                    break;
+                }
             }
 
-            std::string label = utils::getLabel(tokens, macroNames);
-            std::string opcode = utils::getOpcode(tokens, macroNames);
-
-            // Se for uma chamada de macro cadastrada
-            if (!opcode.empty() && macroNames.find(opcode) != macroNames.end()) {
-                expandedAny = true;
-                serialCounter++;
-
-                Macro expandMacro = MNT[opcode];
-
-                // Coleta os argumentos reais da chamada
-                size_t opcodeIdx = 0;
-                for (size_t j = 0; j < tokens.size(); j++) {
-                    if (tokens[j] == opcode) {
-                        opcodeIdx = j;
-                        break;
-                    }
-                }
-
-                std::vector<std::string> actualArguments;
-                for (size_t j = opcodeIdx + 1; j < tokens.size(); j++) {
-                    actualArguments.push_back(tokens[j]);
-                }
-
-                // Expande as linhas
-                for (size_t j = 0; j < expandMacro.body.size(); j++) {
-                    std::string expandedLine = expandMacro.body[j];
-
-                    // Substitui o rótulo serial .SER pelo contador
-                    replaceAll(expandedLine, ".SER", std::to_string(serialCounter));
-
-                    // Substitui marcadores posicionais por argumentos reais
-                    for (size_t k = 0; k < actualArguments.size(); k++) {
-                        replaceAll(expandedLine, "?" + std::to_string(k), actualArguments[k]);
-                    }
-
-                    // Se for a primeira linha da macro expandida e a chamada original tinha label, preserva o label
-                    if (j == 0 && !label.empty()) {
-                        expandedLine = label + " " + expandedLine;
-                    }
-                    passOutput.push_back(expandedLine);
-                }
-                continue;
+            std::vector<std::string> actualArguments;
+            for (size_t j = opcodeIdx + 1; j < tokens.size(); j++) {
+                actualArguments.push_back(tokens[j]);
             }
 
-            passOutput.push_back(expandedProgram[i]);
+            // Expande o corpo da macro inserindo na frente da fila (ordem reversa)
+            for (int j = (int)expandMacro.body.size() - 1; j >= 0; j--) {
+                std::string expandedLine = expandMacro.body[j];
+
+                // Substitui rótulos posicionais e seriais
+                replaceAll(expandedLine, ".SER", std::to_string(serialCounter));
+                for (size_t k = 0; k < actualArguments.size(); k++) {
+                    replaceAll(expandedLine, "?" + std::to_string(k), actualArguments[k]);
+                }
+
+                // Preserva o label na primeira linha expandida
+                if (j == 0 && !label.empty()) {
+                    expandedLine = label + " " + expandedLine;
+                }
+
+                inputQueue.push_front(expandedLine); // Devolve para a fila
+            }
+            continue;
         }
-        expandedProgram = passOutput;
+
+        // MODO NORMAL (Copia para a saída final)
+        finalOutput.push_back(currentLine);
     }
 
-    saveFile(expandedProgram);
+    saveFile(finalOutput);
 }
 
 void MacroProcessor::replaceAll(std::string& str, const std::string& target, const std::string& replacement) {
