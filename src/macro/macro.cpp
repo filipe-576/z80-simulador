@@ -83,7 +83,7 @@ void MacroProcessor::process() {
             
                 if (macroLevel > 0) {
                     macroLevel--;
-                    currentMacro.body.push_back(processedLine);
+                    currentMacro.body.push_back(currentLine);
                 } else {
                     isMacro = false;
                     MNT[currentMacro.name] = currentMacro;
