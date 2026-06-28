@@ -85,7 +85,7 @@ void executeInstruction(CPU& cpu, uint8_t byte) {
     switch (op) {
         case 0b10:
             switch (y) {
-                case 0b100: {
+                case 0b100: { // AND r
                     // Zera os bits configurados na máscara (AND) para realizar testes lógicos no Acumulador.
                     uint8_t val = readRegOrHL(cpu, z);                   
                     regis.A &= val;
@@ -100,7 +100,7 @@ void executeInstruction(CPU& cpu, uint8_t byte) {
                     break;
                 }
 
-                case 0b110: {
+                case 0b110: { // OR r
                     // Combina bits através de OR lógico para setar flags lógicas sem afetar o transporte (Carry).
                     uint8_t val = readRegOrHL(cpu, z);                   
                     regis.A |= val;
@@ -115,7 +115,7 @@ void executeInstruction(CPU& cpu, uint8_t byte) {
                     break;
                 }
 
-                case 0b111: {
+                case 0b111: { // CP r
                     // Executa subtração virtual para comparar valores (CP), atualizando as flags sem alterar o Acumulador.
                     uint8_t val = readRegOrHL(cpu, z);
                     uint16_t res = regis.A - val;
@@ -130,7 +130,7 @@ void executeInstruction(CPU& cpu, uint8_t byte) {
                     break;
                 }
                 
-                case 0b101: {
+                case 0b101: { // XOR r
                     // Operador XOR inverte os bits, sendo uma técnica eficiente e clássica para zerar o Acumulador.
                     uint8_t val = readRegOrHL(cpu, z);                   
                     regis.A ^= val;
@@ -145,7 +145,7 @@ void executeInstruction(CPU& cpu, uint8_t byte) {
                     break;
                 }
                 
-                case 0b000: {
+                case 0b000: { // ADD A, r
                     // Adição aritmética: atualiza o acumulador e registra transporte (Carry) ou transbordo (Overflow).                 
                     uint8_t val = readRegOrHL(cpu, z);
                     uint16_t res = regis.A + val;
@@ -162,7 +162,7 @@ void executeInstruction(CPU& cpu, uint8_t byte) {
                     break;
                 }
 
-                case 0b010: {
+                case 0b010: { // SUB A, r
                     // Subtração aritmética real, diferente do CP que apenas simula o resultado.
                     uint8_t val = readRegOrHL(cpu, z);
                     uint16_t res = regis.A - val;
@@ -183,23 +183,23 @@ void executeInstruction(CPU& cpu, uint8_t byte) {
 
         case 0b01:
             // Interrompe o processador intencionalmente, congelando o pipeline até o próximo interrupt.
-            if (y == 0b110 && z == 0b110) {
+            if (y == 0b110 && z == 0b110) { // HALT
                 cpu.setHalted(true);
             }
             // Move os dados do registrador para o endereço físico mapeado no par HL.
-            else if (y == 0b110) {
+            else if (y == 0b110) { // LD (HL), r
                 uint16_t hl = regis.HL();
                 reg = registerFromByte(z, &regis);
                 cpu.mem.write(hl, *reg);
             }
             // Lê um byte do endereço de memória salvo em HL e alimenta o registrador.
-            else if (z == 0b110) {
+            else if (z == 0b110) { // LD r, (HL)
                uint16_t hl = regis.HL();
                reg = registerFromByte(y, &regis);
                *reg = cpu.mem.read(hl);
             }
             // Movimentação trivial (cópia de barramento interno) entre registradores base.
-            else {
+            else { // LD r, r'
                 reg = registerFromByte(y, &regis);
                 reg2 = registerFromByte(z, &regis);
 
@@ -210,13 +210,25 @@ void executeInstruction(CPU& cpu, uint8_t byte) {
             break;
 
         case 0b00:
+            if (z == 0b010){
+                if (y == 0b111){ // LD A, (nn)
+                    uint16_t adress = cpu.fetch16();
+                    uint8_t valor = cpu.mem.read(adress);
+                    regis.A = valor;
+                }
+                else if (y == 0b110){ // LD (nn), A
+                    uint8_t valor = regis.A;
+                    uint16_t adress = cpu.fetch16();
+                    cpu.mem.write(adress, valor);
+                }
+            }
             // Carga imediata: insere a constante (n) que acompanha o opcode no destino designado.
-            if (z == 0b110) { 
+            else if (z == 0b110) { // LD r, n
                 uint8_t n = cpu.fetch8();
                 writeRegOrHL(cpu, y, n);
             }
             // Incrementa o alvo em 1 de forma atômica (útil para loops em registradores contadores).
-            else if (z == 0b100) { 
+            else if (z == 0b100) { // INC r
                 uint8_t oldVal = readRegOrHL(cpu, y);
                 uint8_t newVal = oldVal + 1;
                 writeRegOrHL(cpu, y, newVal);
@@ -228,7 +240,7 @@ void executeInstruction(CPU& cpu, uint8_t byte) {
                 regis.F.N = false;
             }
             // Decrementa o alvo, geralmente utilizado na finalização de iterações do assembly (ex: DJNZ).
-            else if (z == 0b101) { 
+            else if (z == 0b101) { // DEC r
                 uint8_t oldVal = readRegOrHL(cpu, y);
                 uint8_t newVal = oldVal - 1;
                 writeRegOrHL(cpu, y, newVal);
@@ -260,13 +272,13 @@ void executeInstruction(CPU& cpu, uint8_t byte) {
             switch (z) {
                 case 0b101:
                     // Desvio de rotina que empilha o PC de retorno antes de voar para o destino.
-                    if (y == 0b001) {
+                    if (y == 0b001) { // CALL n, n
                         uint16_t addr = cpu.fetch16();
                         cpu.push(regis.PC);
                         regis.PC = addr;
                     } 
                     // Salva contextualmente os registradores pareados no topo da pilha.
-                    else if ((y & 0b001) == 0) {
+                    else if ((y & 0b001) == 0) { // PUSH qq
                         uint16_t val;
 
                         if (y == 0)      val = regis.BC();
@@ -276,15 +288,94 @@ void executeInstruction(CPU& cpu, uint8_t byte) {
 
                         cpu.push(val);
                     }
+                    else if (y == 0b011){ 
+                        uint8_t nextByte = cpu.fetch8();
+
+                        uint8_t opNextByte = (byte & 0b11000000) >> 6;
+                        uint8_t yNextByte = (byte & 0b00111000) >> 3;
+                        uint8_t zNextByte = (byte & 0b00000111);
+
+                        if (nextByte == 0b00101010){
+                            uint8_t low = cpu.fetch8();
+                            uint8_t high = cpu.fetch8();
+
+                            regis.IX = high;
+                            regis.IX = regis.IX << 8;
+                            regis.IX += low;
+                            
+                        }
+                        
+                        else {
+    
+                            int8_t offset = (int8_t)cpu.fetch8(); // tem que ser com sinal pq pode ser negativo
+
+                            if (nextByte == 0b00110110){ // LD (IX + d), n
+                                uint16_t adress = regis.IX + offset;
+                                uint8_t valor = cpu.fetch8();
+                                cpu.mem.write(adress, valor);
+                                
+                            }
+                            else if (opNextByte == 0b01 && zNextByte == 0b110){ // LD r, (IX + d)
+                                uint16_t adress = regis.IX + offset;
+                                reg = registerFromByte(yNextByte, &regis);
+                                cpu.mem.write(adress, *reg);
+                            }
+                            else if (opNextByte == 0b01 && yNextByte == 0b110){ // LD (IX + d), r
+                                uint16_t adress = regis.IX + offset;
+                                reg = registerFromByte(zNextByte, &regis);
+                                cpu.mem.write(adress, *reg);
+                            }
+                        }
+                    }
+
+                    else if (y == 0b111){ // LD r, (IY+d)
+                        uint8_t nextByte = cpu.fetch8();
+
+                        uint8_t opNextByte = (byte & 0b11000000) >> 6;
+                        uint8_t yNextByte = (byte & 0b00111000) >> 3;
+                        uint8_t zNextByte = (byte & 0b00000111);
+
+                        if (nextByte == 0b00101010){
+                            uint16_t low = cpu.fetch8();
+                            uint16_t high = cpu.fetch8();
+
+                            regis.IY = high;
+                            regis.IY = regis.IY << 8;
+                            regis.IY += low;
+                            
+                        }
+
+                        else {
+
+                            int8_t offset = (int8_t)cpu.fetch8(); // tem que ser com sinal pq pode ser negativo
+
+                            if (nextByte == 0b00110110){ // LD (IY + d), n
+                                uint16_t adress = regis.IY + offset;
+                                uint8_t valor = cpu.fetch8();
+                                cpu.mem.write(adress, valor);
+
+                            }
+                            else if (opNextByte == 0b01 && zNextByte == 0b110){ // LD r, (IY + d)
+                                uint16_t adress = regis.IY + offset;
+                                reg = registerFromByte(yNextByte, &regis);
+                                cpu.mem.write(adress, *reg);
+                            }
+                            else if (opNextByte == 0b01 && yNextByte == 0b110){ // LD (IY + d), r
+                                uint16_t adress = regis.IY + offset;
+                                reg = registerFromByte(zNextByte, &regis);
+                                cpu.mem.write(adress, *reg);
+                            }
+                        }
+                    }
                     break;
                     
                 case 0b001:
                     // Retorno incondicional que desempilha o endereço chamador guardado pelo último CALL.
-                    if (y == 0b001) {
+                    if (y == 0b001) { // RET
                         regis.PC = cpu.pop();
                     }
                     // Recupera um par de registradores de 16 bits removendo da pilha (Stack Memory).
-                    else if ((y & 0b001) == 0) {
+                    else if ((y & 0b001) == 0) { // POP qq
                         uint16_t val = cpu.pop();
 
                         if (y == 0)      regis.setBC(val);
@@ -299,7 +390,7 @@ void executeInstruction(CPU& cpu, uint8_t byte) {
                 
                 case 0b011:
                     // Desvio direto do Program Counter (PC) baseado no endereço lido (Jump absoluto).
-                    if (y == 0) {
+                    if (y == 0) { // JP nn
                         regis.PC = cpu.fetch16();
                     }
                     break;
