@@ -19,6 +19,11 @@ namespace utils{
     bool isMachineInstruction(const std::string& label);
 
 
+/** 
+ * @brief   Retorna o operando da instrução
+ *
+ * @param   index 0 retorna o primeiro operando, 1 o segundo operando
+ */
     std::string getOperand(const std::vector<std::string>& instruction, const unsigned short index=0);
 
 

@@ -53,3 +53,7 @@ cmake_install.cmake
 Makefile
 z80-simulador
 *.cache/
+tests/test
+tests/test.cpp
+tests/test.cpp
+tests/test.cpp

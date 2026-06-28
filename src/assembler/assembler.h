@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <set>
 #include <string>
 #include <vector>
@@ -19,7 +20,14 @@ public:
 private:
     unsigned int locationCounter;
     std::unordered_map<std::string, unsigned int> symbolTable;
+    typedef struct RelocationItem_t{
+        unsigned int offset, size;
+        std::string symbol;
+    } RelocationItem;
+    std::vector<RelocationItem> relocationTable;
     std::vector<std::string> program;
+    std::vector<uint8_t> machineCode;
+    int startAddress = -1;
     std::string fileName;
     const std::set<std::string> MACHINE_INSTRUCTIONS = {
         "LD", "ADD", "SUB", "INC", "DEC", "AND", "OR", "XOR", "CP", "JP", "JR",
@@ -51,5 +59,8 @@ private:
  * Retorna -1 caso não encontre.
  */
     int findInTable(const std::string& label);
+
+
+    void generateMachineCode(const std::vector<std::string>& instruction);
 
 };

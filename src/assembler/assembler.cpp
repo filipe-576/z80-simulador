@@ -1,5 +1,6 @@
 #include "assembler.h"
 #include <cstddef>
+#include <cstdint>
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
@@ -24,7 +25,7 @@ void Assembler::loadFile(){
 
 void Assembler::assemble(){
     firstPass();
-    // secondPass();
+    secondPass();
 }
 
 
@@ -80,6 +81,88 @@ void Assembler::firstPass(){
     }
 }
 
+void Assembler::secondPass(){
+    locationCounter = 0;
+    std::string opcode, operand;
+    unsigned int length;
+    startAddress= -1;
+    
+    for( std::string instructionString: program ){
+        std::vector<std::string> instruction = utils::tokenizeInstruction(instructionString);
+        if( instruction.empty() ) continue;
+
+        opcode = utils::getOpcode(instruction);
+        operand = utils::getOperand(instruction);
+
+        if( opcode == "EQU" ){}// Ignora
+        else if( opcode == "ORG" ){
+            locationCounter = getOperandValue(operand);
+        } else if( opcode == "END" ){
+            startAddress = getOperandValue(operand);
+            return;
+        } else{
+            length = getInstructionSize(instruction);
+            generateMachineCode(instruction);
+
+            locationCounter += length;
+        }
+
+
+    }
+}
+
+void Assembler::generateMachineCode(const std::vector<std::string>& instruction){
+    std::string opcode = utils::getOpcode(instruction);
+    if (opcode.empty()) return;
+
+    // Pseudo-instruções
+    if (opcode == "DS") {
+        unsigned int operand = getOperandValue(utils::getOperand(instruction, 0));
+        for( int i = 0; i < operand; ++i ){
+            machineCode.push_back(0);
+        }
+    }
+    
+    else if (opcode == "DC") {
+        uint8_t operand = getOperandValue(utils::getOperand(instruction));
+        machineCode.push_back(operand);
+    }
+
+    // Instruções de máquina
+
+    else if( opcode == "NOP" ){
+        machineCode.push_back(0);
+    }
+
+    else if( opcode == "HALT" ){
+        machineCode.push_back(0b01110110);
+    }
+
+
+    std::string op1 = utils::getOperand(instruction, 0);
+    std::string op2 = utils::getOperand(instruction, 1);
+
+    auto isReg8 = [](const std::string& op) {
+        return op == "A" || op == "B" || op == "C" || op == "D" || op == "E" || op == "H" || op == "L";
+    };
+
+    auto isReg16 = [](const std::string& op) {
+        return op == "BC" || op == "DE" || op == "HL" || op == "SP" || op == "IX" || op == "IY" || op == "AF";
+    };
+
+    auto isInd = [](const std::string& op) {
+        return !op.empty() && op.front() == '(' && op.back() == ')';
+    };
+
+    auto isIdx = [](const std::string& op) {
+        return !op.empty() && op.front() == '(' && op.back() == ')' && 
+               (op.find("IX") != std::string::npos || op.find("IY") != std::string::npos);
+    };
+
+    if (opcode == "LD") {
+        if( opcode )
+    }
+}
 
 unsigned int Assembler::getInstructionSize(const std::vector<std::string>& instruction){
     std::string opcode = utils::getOpcode(instruction);
@@ -273,5 +356,10 @@ void Assembler::debug(){
     std::cout << "Tabela de símbolos:" << std::endl;
     for( auto it = symbolTable.begin(); it != symbolTable.end(); it++ ){
         std::cout << it->first << "\t\t" << it->second << std::endl;
+    }
+
+    std::cout << "Código de Máquina" << std::endl;
+    for( int byte: machineCode ){
+        std::cout << byte << " ";
     }
 }
