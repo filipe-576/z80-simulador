@@ -17,7 +17,6 @@ uint8_t* registerFromByte(uint8_t regIndex, Registers* registradores) {
     }
 }
 
-
 bool getParity(uint8_t val) {
     uint8_t count = 0;
 
@@ -83,7 +82,7 @@ void executeInstruction(CPU& cpu, uint8_t byte) {
     uint8_t* reg2;
 
     switch (op) {
-        case 0b10:
+        case 0b10: // 10xxxxxx
             switch (y) {
                 case 0b100: { // AND r
                     // Zera os bits configurados na máscara (AND) para realizar testes lógicos no Acumulador.
@@ -181,7 +180,7 @@ void executeInstruction(CPU& cpu, uint8_t byte) {
             }
             break;
 
-        case 0b01:
+        case 0b01: // 01xxxxxx
             // Interrompe o processador intencionalmente, congelando o pipeline até o próximo interrupt.
             if (y == 0b110 && z == 0b110) { // HALT
                 cpu.setHalted(true);
@@ -209,17 +208,17 @@ void executeInstruction(CPU& cpu, uint8_t byte) {
             }
             break;
 
-        case 0b00:
-            if (z == 0b010){
+        case 0b00: // 00xxxxxx
+            if (z == 0b010){ // 00xxx010
                 if (y == 0b111){ // LD A, (nn)
-                    uint16_t adress = cpu.fetch16();
-                    uint8_t valor = cpu.mem.read(adress);
-                    regis.A = valor;
+                    uint16_t address = cpu.fetch16();
+                    uint8_t value = cpu.mem.read(address);
+                    regis.A = value;
                 }
                 else if (y == 0b110){ // LD (nn), A
-                    uint8_t valor = regis.A;
-                    uint16_t adress = cpu.fetch16();
-                    cpu.mem.write(adress, valor);
+                    uint8_t value = regis.A;
+                    uint16_t address = cpu.fetch16();
+                    cpu.mem.write(address, value);
                 }
             }
             // Carga imediata: insere a constante (n) que acompanha o opcode no destino designado.
@@ -252,31 +251,47 @@ void executeInstruction(CPU& cpu, uint8_t byte) {
                 regis.F.N = true;
             }
             // Opcode que demanda salto no fluxo (Jump) ou Nenhuma Operação (ciclos de delay).
-            else if (z == 0b000) {
+            else if (z == 0b000) { // 00xxx000
                 switch (y) {
                     case 0b000:
                         // NOP: Não altera registradores nem a memória, mas consome tempo de relógio.
                         break;
 
-                    case 0b011: {
+                    case 0b011:{
                         // JR: Salto relativo, usa um signed offset para pular código para frente ou trás.
                         int8_t offset = static_cast<int8_t>(cpu.fetch8()); 
                         regis.PC += offset;
+                        break;
+                    }
+                    
+                    case 0b100:{ // JR NZ, e                        
+                        int8_t offset = static_cast<int8_t>(cpu.fetch8());
+                        if( !regis.F.Z ){
+                            regis.PC += offset;
+                        }
+                        break;
+                    }
+
+                    case 0b101:{ // JR Z, e
+                        int8_t offset = static_cast<int8_t>(cpu.fetch8());
+                        if( regis.F.Z ){
+                            regis.PC += offset;
+                        }
                         break;
                     }
                 }
             }
             break;
         
-        case 0b11:
+        case 0b11: // 11xxxxxx
             switch (z) {
-                case 0b101:
+                case 0b101: // 11xxx101
                     // Desvio de rotina que empilha o PC de retorno antes de voar para o destino.
-                    if (y == 0b001) { // CALL n, n
-                        uint16_t addr = cpu.fetch16();
+                    if (y == 0b001) { // CALL nn
+                        uint16_t address = cpu.fetch16();
                         cpu.push(regis.PC);
-                        regis.PC = addr;
-                    } 
+                        regis.PC = address;
+                    }
                     // Salva contextualmente os registradores pareados no topo da pilha.
                     else if ((y & 0b001) == 0) { // PUSH qq
                         uint16_t val;
@@ -288,82 +303,123 @@ void executeInstruction(CPU& cpu, uint8_t byte) {
 
                         cpu.push(val);
                     }
-                    else if (y == 0b011){ 
+                    // LD com IX ou IY
+                    else if (y == 0b011){  // 11011101 xxxxxxxx LD IX, (nn) | LD IX, nn | LD (nn), IX
                         uint8_t nextByte = cpu.fetch8();
 
-                        uint8_t opNextByte = (byte & 0b11000000) >> 6;
-                        uint8_t yNextByte = (byte & 0b00111000) >> 3;
-                        uint8_t zNextByte = (byte & 0b00000111);
+                        uint8_t opNextByte = (nextByte & 0b11000000) >> 6;
+                        uint8_t yNextByte = (nextByte & 0b00111000) >> 3;
+                        uint8_t zNextByte = (nextByte & 0b00000111);
 
-                        if (nextByte == 0b00101010){
+                        if ( nextByte == 0b00100001 ){ // LD IX, nn
                             uint8_t low = cpu.fetch8();
                             uint8_t high = cpu.fetch8();
 
                             regis.IX = high;
                             regis.IX = regis.IX << 8;
                             regis.IX += low;
-                            
+                        }
+
+                        else if ( nextByte == 0b00101010 ){ // LD IX, (nn)
+                            uint16_t address = cpu.fetch16();
+                            uint8_t low = cpu.mem.read(address);
+                            address = cpu.fetch16();
+                            uint8_t high = cpu.mem.read(address);
+
+                            regis.IX = high;
+                            regis.IX = regis.IX << 8;
+                            regis.IX += low;
+                        }
+
+                        else if( nextByte == 0b00100010 ){ // LD (nn), IX
+                            uint8_t high = regis.IX >> 8;
+                            uint8_t low = regis.IX; // Implicitamente usa a parte baixa na conversão
+                            uint16_t address = cpu.fetch16();
+                            cpu.mem.write(address, low);
+                            address = cpu.fetch16();
+                            cpu.mem.write(address, high);
                         }
                         
-                        else {
-    
+                        else { // LD com deslocamento
+
                             int8_t offset = (int8_t)cpu.fetch8(); // tem que ser com sinal pq pode ser negativo
 
                             if (nextByte == 0b00110110){ // LD (IX + d), n
-                                uint16_t adress = regis.IX + offset;
-                                uint8_t valor = cpu.fetch8();
-                                cpu.mem.write(adress, valor);
+                                uint16_t address = regis.IX + offset;
+                                uint8_t value = cpu.fetch8();
+                                cpu.mem.write(address, value);
                                 
                             }
                             else if (opNextByte == 0b01 && zNextByte == 0b110){ // LD r, (IX + d)
-                                uint16_t adress = regis.IX + offset;
+                                uint16_t address = regis.IX + offset;
                                 reg = registerFromByte(yNextByte, &regis);
-                                cpu.mem.write(adress, *reg);
+                                *reg = cpu.mem.read(address);
+                                
                             }
                             else if (opNextByte == 0b01 && yNextByte == 0b110){ // LD (IX + d), r
-                                uint16_t adress = regis.IX + offset;
+                                uint16_t address = regis.IX + offset;
                                 reg = registerFromByte(zNextByte, &regis);
-                                cpu.mem.write(adress, *reg);
+                                cpu.mem.write(address, *reg);
                             }
                         }
                     }
 
-                    else if (y == 0b111){ // LD r, (IY+d)
+                    else if (y == 0b111){ // 11111101 xxxxxxxx LD IY, (nn) | LD IY, nn | LD (nn), IY
                         uint8_t nextByte = cpu.fetch8();
 
-                        uint8_t opNextByte = (byte & 0b11000000) >> 6;
-                        uint8_t yNextByte = (byte & 0b00111000) >> 3;
-                        uint8_t zNextByte = (byte & 0b00000111);
+                        uint8_t opNextByte = (nextByte & 0b11000000) >> 6;
+                        uint8_t yNextByte = (nextByte & 0b00111000) >> 3;
+                        uint8_t zNextByte = (nextByte & 0b00000111);
 
-                        if (nextByte == 0b00101010){
-                            uint16_t low = cpu.fetch8();
-                            uint16_t high = cpu.fetch8();
+                        if ( nextByte == 0b00100001 ){ // LD IY, nn
+                            uint8_t low = cpu.fetch8();
+                            uint8_t high = cpu.fetch8();
 
                             regis.IY = high;
                             regis.IY = regis.IY << 8;
                             regis.IY += low;
-                            
                         }
 
-                        else {
+                        else if ( nextByte == 0b00101010 ){ // LD IY, (nn)
+                            uint16_t address = cpu.fetch16();
+                            uint8_t low = cpu.mem.read(address);
+                            address = cpu.fetch16();
+                            uint8_t high = cpu.mem.read(address);
+
+                            regis.IY = high;
+                            regis.IY = regis.IY << 8;
+                            regis.IY += low;
+                        }
+
+                        else if( nextByte == 0b00100010 ){ // LD (nn), IY
+                            uint8_t high = regis.IY >> 8;
+                            uint8_t low = regis.IY; // Implicitamente usa a parte baIYa na conversão
+                            uint16_t address = cpu.fetch16();
+                            cpu.mem.write(address, low);
+                            address = cpu.fetch16();
+                            cpu.mem.write(address, high);
+                        }
+                        
+                        else { // LD com deslocamento
 
                             int8_t offset = (int8_t)cpu.fetch8(); // tem que ser com sinal pq pode ser negativo
 
                             if (nextByte == 0b00110110){ // LD (IY + d), n
-                                uint16_t adress = regis.IY + offset;
-                                uint8_t valor = cpu.fetch8();
-                                cpu.mem.write(adress, valor);
-
+                                uint16_t address = regis.IY + offset;
+                                uint8_t value = cpu.fetch8();
+                                cpu.mem.write(address, value);
+                                
                             }
                             else if (opNextByte == 0b01 && zNextByte == 0b110){ // LD r, (IY + d)
-                                uint16_t adress = regis.IY + offset;
+                                uint16_t address = regis.IY + offset;
                                 reg = registerFromByte(yNextByte, &regis);
-                                cpu.mem.write(adress, *reg);
+                                *reg = cpu.mem.read(address);
+                                
                             }
                             else if (opNextByte == 0b01 && yNextByte == 0b110){ // LD (IY + d), r
-                                uint16_t adress = regis.IY + offset;
+                                uint16_t address = regis.IY + offset;
                                 reg = registerFromByte(zNextByte, &regis);
-                                cpu.mem.write(adress, *reg);
+                                cpu.mem.write(address, *reg);
                             }
                         }
                     }
