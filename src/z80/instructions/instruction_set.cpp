@@ -291,9 +291,9 @@ void executeInstruction(CPU& cpu, uint8_t byte) {
                     else if (y == 0b011){  // 11011101 xxxxxxxx LD IX, (nn) | LD IX, nn | LD (nn), IX
                         uint8_t nextByte = cpu.fetch8();
 
-                        uint8_t opNextByte = (byte & 0b11000000) >> 6;
-                        uint8_t yNextByte = (byte & 0b00111000) >> 3;
-                        uint8_t zNextByte = (byte & 0b00000111);
+                        uint8_t opNextByte = (nextByte & 0b11000000) >> 6;
+                        uint8_t yNextByte = (nextByte & 0b00111000) >> 3;
+                        uint8_t zNextByte = (nextByte & 0b00000111);
 
                         if ( nextByte == 0b00100001 ){ // LD IX, nn
                             uint8_t low = cpu.fetch8();
