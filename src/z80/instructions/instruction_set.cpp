@@ -257,10 +257,26 @@ void executeInstruction(CPU& cpu, uint8_t byte) {
                         // NOP: Não altera registradores nem a memória, mas consome tempo de relógio.
                         break;
 
-                    case 0b011: {
+                    case 0b011:{
                         // JR: Salto relativo, usa um signed offset para pular código para frente ou trás.
                         int8_t offset = static_cast<int8_t>(cpu.fetch8()); 
                         regis.PC += offset;
+                        break;
+                    }
+                    
+                    case 0b100:{ // JR NZ, e                        
+                        int8_t offset = static_cast<int8_t>(cpu.fetch8());
+                        if( !regis.F.Z ){
+                            regis.PC += offset;
+                        }
+                        break;
+                    }
+
+                    case 0b101:{ // JR Z, e
+                        int8_t offset = static_cast<int8_t>(cpu.fetch8());
+                        if( regis.F.Z ){
+                            regis.PC += offset;
+                        }
                         break;
                     }
                 }
@@ -351,9 +367,9 @@ void executeInstruction(CPU& cpu, uint8_t byte) {
                     else if (y == 0b111){ // 11111101 xxxxxxxx LD IY, (nn) | LD IY, nn | LD (nn), IY
                         uint8_t nextByte = cpu.fetch8();
 
-                        uint8_t opNextByte = (byte & 0b11000000) >> 6;
-                        uint8_t yNextByte = (byte & 0b00111000) >> 3;
-                        uint8_t zNextByte = (byte & 0b00000111);
+                        uint8_t opNextByte = (nextByte & 0b11000000) >> 6;
+                        uint8_t yNextByte = (nextByte & 0b00111000) >> 3;
+                        uint8_t zNextByte = (nextByte & 0b00000111);
 
                         if ( nextByte == 0b00100001 ){ // LD IY, nn
                             uint8_t low = cpu.fetch8();
