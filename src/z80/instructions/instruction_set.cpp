@@ -302,10 +302,29 @@ void executeInstruction(CPU& cpu, uint8_t byte) {
                             regis.IX = high;
                             regis.IX = regis.IX << 8;
                             regis.IX += low;
-                            
+                        }
+
+                        else if ( nextByte == 0b00101010 ){ // LD IX, (nn)
+                            uint16_t address = cpu.fetch16();
+                            uint8_t low = cpu.mem.read(address);
+                            address = cpu.fetch16();
+                            uint8_t high = cpu.mem.read(address);
+
+                            regis.IX = high;
+                            regis.IX = regis.IX << 8;
+                            regis.IX += low;
                         }
                         
-                        else {
+                        else if( nextByte == 0b00100010 ){ // LD (nn), IX
+                            uint8_t high = regis.IX >> 8;
+                            uint8_t low = regis.IX; // Implicitamente usa a parte baixa na conversão
+                            uint16_t address = cpu.fetch16();
+                            cpu.mem.write(address, low);
+                            address = cpu.fetch16();
+                            cpu.mem.write(address, high);
+                        }
+                        
+                        else { // LD com deslocamento
     
                             int8_t offset = (int8_t)cpu.fetch8(); // tem que ser com sinal pq pode ser negativo
 
@@ -335,14 +354,33 @@ void executeInstruction(CPU& cpu, uint8_t byte) {
                         uint8_t yNextByte = (byte & 0b00111000) >> 3;
                         uint8_t zNextByte = (byte & 0b00000111);
 
-                        if (nextByte == 0b00101010){
-                            uint16_t low = cpu.fetch8();
-                            uint16_t high = cpu.fetch8();
+                        if ( nextByte == 0b00100001 ){ // LD IY, nn
+                            uint8_t low = cpu.fetch8();
+                            uint8_t high = cpu.fetch8();
 
                             regis.IY = high;
                             regis.IY = regis.IY << 8;
                             regis.IY += low;
-                            
+                        }
+
+                        else if ( nextByte == 0b00101010 ){ // LD IY, (nn)
+                            uint16_t address = cpu.fetch16();
+                            uint8_t low = cpu.mem.read(address);
+                            address = cpu.fetch16();
+                            uint8_t high = cpu.mem.read(address);
+
+                            regis.IY = high;
+                            regis.IY = regis.IY << 8;
+                            regis.IY += low;
+                        }
+
+                        else if( nextByte == 0b00100010 ){ // LD (nn), IY
+                            uint8_t high = regis.IY >> 8;
+                            uint8_t low = regis.IY; // Implicitamente usa a parte baIYa na conversão
+                            uint16_t address = cpu.fetch16();
+                            cpu.mem.write(address, low);
+                            address = cpu.fetch16();
+                            cpu.mem.write(address, high);
                         }
 
                         else {
