@@ -1,15 +1,13 @@
 ; símbolos
-DATA_SEG    EQU     @100;teste
-CODE_SEG    EQU     @0
 LIMIT       EQU     @5
 
 ; dados
-            ORG     DATA_SEG
+
 COUNTER     DC      @1
 RESULT      DS      @1
 
 ; codigo
-            ORG     CODE_SEG
+
 START       LD      A, @0
             LD      (COUNTER), A
 

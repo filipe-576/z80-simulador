@@ -33,7 +33,7 @@ void Assembler::firstPass(){
     locationCounter = 0;
     symbolTable = {};
     std::string label, opcode, operand;
-    unsigned int length, value;
+    uint length, value;
     
     for( std::string instructionString: program ){
         std::vector<std::string> instruction = utils::tokenizeInstruction(instructionString);
@@ -50,10 +50,7 @@ void Assembler::firstPass(){
             continue;
         }
         if( utils::isPseudoInstruction(opcode) ){
-            if( opcode == "ORG" ){
-                locationCounter = getOperandValue(operand);
-                length = 0;
-            } else if( opcode == "END" ){
+            if( opcode == "END" ){
                 return;
             } else if( opcode == "EQU" ){
                 value = getOperandValue(operand);
@@ -95,9 +92,7 @@ void Assembler::secondPass(){
         operand = utils::getOperand(instruction);
 
         if( opcode == "EQU" ){}// Ignora
-        else if( opcode == "ORG" ){
-            locationCounter = getOperandValue(operand);
-        } else if( opcode == "END" ){
+        else if( opcode == "END" ){
             startAddress = getOperandValue(operand);
             return;
         } else{
