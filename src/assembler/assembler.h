@@ -46,10 +46,6 @@ private:
     int getOperandValue(const std::string& operand);
 
 
-/** 
- * @brief   Retorna o tamanho em bytes ocupado pela instrução.
- */
-    unsigned int getInstructionSize(const std::vector<std::string>& instruction);
 
     void insertInTable(const std::string& label, unsigned int value);
 
