@@ -3,12 +3,12 @@
 #include <sstream>
 
 bool utils::isPseudoInstruction(const std::string& label){
-    return utils::PSEUDO_INSTRUCTIONS.count(label) > 0;
+    return PSEUDO_INSTRUCTIONS.count(label) > 0;
 }
 
 
 bool utils::isMachineInstruction(const std::string& label){
-    return utils::MACHINE_INSTRUCTIONS.count(label) > 0;
+    return MACHINE_INSTRUCTIONS.count(label) > 0;
 }
 
 

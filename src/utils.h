@@ -10,7 +10,7 @@ namespace utils{
         "CALL","RET", "PUSH", "POP", "NOP", "HALT"
     };
     const std::set<std::string> PSEUDO_INSTRUCTIONS = {
-        "ORG", "END", "EQU", "DS", "DC"
+        "END", "EQU", "DS", "DC", "INTUSE", "INTDEF"
     };
 
 
