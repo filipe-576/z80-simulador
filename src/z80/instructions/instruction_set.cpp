@@ -444,6 +444,26 @@ void executeInstruction(CPU& cpu, uint8_t byte) {
                     }
                     break;
                 
+                case 0b010: { // JP cc, nn / 11 ccc 010
+                    uint16_t address = cpu.fetch16();
+                    bool cond;
+                    switch (y) {
+                        case 0b000: cond = !regis.F.Z;  break; // NZ
+                        case 0b001: cond =  regis.F.Z;  break; // Z
+                        case 0b010: cond = !regis.F.C;  break; // NC
+                        case 0b011: cond =  regis.F.C;  break; // C
+                        case 0b100: cond = !regis.F.PV; break; // PO
+                        case 0b101: cond =  regis.F.PV; break; // PE
+                        case 0b110: cond = !regis.F.S;  break; // P (Positivo)
+                        case 0b111: cond =  regis.F.S;  break; // M (Negativo)
+                        default:    cond = false;        break;
+                    }
+                    if (cond) {
+                        regis.PC = address;
+                    }
+                    break;
+                }
+
                 case 0b011:
                     // Desvio direto do Program Counter (PC) baseado no endereço lido (Jump absoluto).
                     if (y == 0) { // JP nn
