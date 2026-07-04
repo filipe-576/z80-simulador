@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <fstream>
 #include <iostream>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include "../utils.h"
@@ -25,15 +26,19 @@ void Assembler::loadFile() {
 
 void Assembler::assemble() {
     firstPass();
-    secondPass();
+    // secondPass();
 }
 
 
 void Assembler::firstPass() {
     locationCounter = 0;
-    symbolTable = {};
+    symbolTable     = {};
+    usageTable        = {};
+    defTable        = {};
+    pendingExports  = {};
     std::string label, opcode, operand;
-    uint length, value;
+    uint length;
+    std::optional<uint16_t> value;
     
     for( std::string instructionString: program ){
         std::vector<std::string> instruction = utils::tokenizeInstruction(instructionString);
@@ -42,32 +47,57 @@ void Assembler::firstPass() {
         label   = utils::getLabel(instruction);
         opcode  = utils::getOpcode(instruction);
         operand = utils::getOperand(instruction);
+        SymbolType type = SymbolType::RELATIVE;
+        SymbolScope scope = SymbolScope::LOCAL;
 
+        // Linha com rótulo sem operador
         if (opcode.empty()) {
             if (!label.empty()) {
-                insertInTable(label, locationCounter);
+                symbolTable.insert({label, {locationCounter, type, scope}});
             }
             continue;
         }
+
+        // Pseudo Instruções
         if( utils::isPseudoInstruction(opcode) ){
             if( opcode == "END" ){
+                // Altera o escopo dos símbolos que foram utilizados com INTDEF para global na tabela de símbolos
+                for( auto& symbol: pendingExports ){
+                    symbolTable.at(symbol).scope = SymbolScope::GLOBAL;
+                }
                 return;
-            } else if (opcode == "EQU") {
+            }
+            else if (opcode == "EQU") {
                 value  = getOperandValue(operand);
+                type = SymbolType::ABSOLUTE;
                 length = 0;
-            } else { // "DS" ou "DC"
+            }
+            else if (opcode == "INTUSE") {
+                scope = SymbolScope::EXTERN;
+                type = SymbolType::NOT_RESOLVED;
+                value = std::nullopt;
+                length = 0;
+                
+            }
+            else if (opcode == "INTDEF") {
+                pendingExports.push_back(operand);
+                length = 0;
+                
+            }
+            else { // "DS" ou "DC"
                 value  = locationCounter;
                 length = utils::getInstructionSize(instruction);
             }
 
             if (!label.empty()) {
-                insertInTable(label, value);
+                symbolTable.insert({label, {value, type, scope}});
             }
             locationCounter += length;
 
+        // Instruções de Máquina
         } else if (utils::isMachineInstruction(opcode)) {
             if (!label.empty()) {
-                insertInTable(label, locationCounter);
+                symbolTable.insert({label, {locationCounter, type, scope}});
             }
             length = utils::getInstructionSize(instruction);
             locationCounter += length;
@@ -82,9 +112,9 @@ void Assembler::firstPass() {
 void Assembler::secondPass() {
     locationCounter = 0;
     std::string opcode, operand;
-    uint length;
+    uint length, instructionOffset, operandTotalOffset;
     startAddress= -1;
-
+    
     for( std::string instructionString: program ){
         std::vector<std::string> instruction = utils::tokenizeInstruction(instructionString);
         if (instruction.empty()) continue;
@@ -92,22 +122,41 @@ void Assembler::secondPass() {
         opcode  = utils::getOpcode(instruction);
         operand = utils::getOperand(instruction);
 
-        if( opcode == "EQU" ){}// Ignora
+        if( opcode == "EQU" || opcode == "INTUSE" || opcode == "INTDEF"){} // Ignora
         else if( opcode == "END" ){
             startAddress = getOperandValue(operand);
             return;
         } else {
             length = utils::getInstructionSize(instruction);
-            generateMachineCode(instruction);
+            instructionOffset = machineCode.size();
+
+            // FALTA FAZER ESSA PARTE
+            // Tem que arrumar as tabelas de uso e definição também
+            GenerateCodeResult result = generateMachineCode(instruction);
+            if( result.operandOffset != -1 ){
+                operandTotalOffset = instructionOffset + result.operandOffset;
+                Symbol symbol = findInTable(operand);
+
+                if( symbol.type == SymbolType::ABSOLUTE ) break;
+
+                if( symbol.scope == SymbolScope::EXTERN ){
+                    usageTable.insert({operand, 0}); // Valor 0 para ser substituido no ligador
+                }
+
+            }
+
+            machineCode.insert(machineCode.end(), result.bytes.begin(), result.bytes.end());
             locationCounter += length;
         }
     }
 }
 
 
-void Assembler::generateMachineCode(const std::vector<std::string>& instruction) {
+Assembler::GenerateCodeResult Assembler::generateMachineCode(const std::vector<std::string>& instruction) {
     std::string opcode = utils::getOpcode(instruction);
-    if ( opcode.empty() ) return;
+    std::vector<uint8_t> bytes;
+
+    if ( opcode.empty() ) return {bytes, 0};
 
 
     auto reg8Code = [](const std::string& r) -> uint8_t {
@@ -152,16 +201,16 @@ void Assembler::generateMachineCode(const std::vector<std::string>& instruction)
 
     // Gera o código de máquina de 16 bits a partir de um valor imediato
     auto generateImediate16 = [&](uint16_t val) {
-        machineCode.push_back(val & 0b0000000011111111);
-        machineCode.push_back((val >> 8) & 0b0000000011111111);
+        bytes.push_back(val & 0b0000000011111111);
+        bytes.push_back((val >> 8) & 0b0000000011111111);
     };
 
     // Gera o código de máquina de 16 bits a partir de um símbolo
     auto generateOperand16 = [&](const std::string& operand) {
         int val = getOperandValue(operand);
         if( val < 0 ) {
-            bool isExt = useTable.count(operand) > 0;
-            relocationTable.push_back({(unsigned int)machineCode.size(), 2, operand, isExt});
+            bool isExt = usageTable.count(operand) > 0;
+            relocationTable.push_back({(unsigned int)bytes.size(), 2, operand});
             generateImediate16(0);
         } else {
             generateImediate16(static_cast<uint16_t>(val));
@@ -172,11 +221,11 @@ void Assembler::generateMachineCode(const std::vector<std::string>& instruction)
     auto generateOperand8 = [&](const std::string& operand) {
         int val = getOperandValue(operand);
         if( val < 0 ) {
-            bool isExt = useTable.count(operand) > 0;
-            relocationTable.push_back({(unsigned int)machineCode.size(), 1, operand, isExt});
-            machineCode.push_back(0);
+            bool isExt = usageTable.count(operand) > 0;
+            relocationTable.push_back({(unsigned int)bytes.size(), 1, operand, isExt});
+            bytes.push_back(0);
         } else {
-            machineCode.push_back(static_cast<uint8_t>(val));
+            bytes.push_back(static_cast<uint8_t>(val));
         }
     };
 
@@ -200,9 +249,9 @@ void Assembler::generateMachineCode(const std::vector<std::string>& instruction)
     if( opcode == "DS"){
         unsigned int count = getOperandValue(utils::getOperand(instruction, 0));
         for( unsigned int i = 0; i < count; ++i ){
-            machineCode.push_back(0);
+            bytes.push_back(0);
         }
-        return;
+        return {bytes, -1};
     }
 
     if( opcode == "DC" ){
@@ -216,25 +265,25 @@ void Assembler::generateMachineCode(const std::vector<std::string>& instruction)
         for ( size_t i = opcodePos + 1; i < instruction.size(); ++i ){
             generateOperand8(instruction[i]);
         }
-        return;
+        return {bytes, -1};
     }
 
 
     if( opcode == "NOP" ){
-        machineCode.push_back(0b00000000);
-        return;
+        bytes.push_back(0b00000000);
+        return {bytes, -1};
     }
 
 
     if( opcode == "HALT" ){
-        machineCode.push_back(0b01110110);
-        return;
+        bytes.push_back(0b01110110);
+        return {bytes, -1};
     }
 
 
     if( opcode == "RET" ){
-        machineCode.push_back(0b11001001);
-        return;
+        bytes.push_back(0b11001001);
+        return {bytes, -1};
     }
     
     std::string op1 = utils::getOperand(instruction, 0);
@@ -247,16 +296,16 @@ void Assembler::generateMachineCode(const std::vector<std::string>& instruction)
             uint8_t prefix = ixiyPrefix(op1);
             if( isInd(op2) ){
                 // LD IX, (nn)
-                machineCode.push_back(prefix);
-                machineCode.push_back(0b00101010);
+                bytes.push_back(prefix);
+                bytes.push_back(0b00101010);
                 generateOperand16(stripParens(op2));
             } else {
                 // LD IX, nn
-                machineCode.push_back(prefix);
-                machineCode.push_back(0b00100001);
+                bytes.push_back(prefix);
+                bytes.push_back(0b00100001);
                 generateOperand16(op2);
             }
-            return;
+            return {bytes, 2}; // prefix + opcode = 2 bytes
         }
 
         // LD (algo), ... 
@@ -267,48 +316,50 @@ void Assembler::generateMachineCode(const std::vector<std::string>& instruction)
                 int8_t d = parseIdx(op1);
                 if( isReg8(op2) ){
                     // LD (IX+d), r
-                    machineCode.push_back(prefix);
-                    machineCode.push_back(0b01110000 | reg8Code(op2));
-                    machineCode.push_back(static_cast<uint8_t>(d));
+                    bytes.push_back(prefix);
+                    bytes.push_back(0b01110000 | reg8Code(op2));
+                    bytes.push_back(static_cast<uint8_t>(d));
+                    return {bytes, -1};
                 } else {
                     // LD (IX+d), n
-                    machineCode.push_back(prefix);
-                    machineCode.push_back(0b00110110);
-                    machineCode.push_back(static_cast<uint8_t>(d));
+                    bytes.push_back(prefix);
+                    bytes.push_back(0b00110110);
+                    bytes.push_back(static_cast<uint8_t>(d));
                     generateOperand8(op2);
+                    return {bytes, 3}; // prefix + opcode + d = 3
                 }
-                return;
             }
 
             // LD (HL), r  |  LD (HL), n
             if( op1 == "(HL)" ){
                 if( isReg8(op2) ){
                     // LD (HL), r
-                    machineCode.push_back(0b01110000 | reg8Code(op2));
+                    bytes.push_back(0b01110000 | reg8Code(op2));
+                    return {bytes, -1};
                 } else {
                     // LD (HL), n
-                    machineCode.push_back(0b00110110);
+                    bytes.push_back(0b00110110);
                     generateOperand8(op2);
+                    return {bytes, 1};
                 }
-                return;
             }
 
             // LD (nn), A
             if( op2 == "A" ){
-                machineCode.push_back(0b00110010);
+                bytes.push_back(0b00110010);
                 generateOperand16(stripParens(op1));
-                return;
+                return {bytes, 1};
             }
 
             // LD (nn), IX | LD (nn), IY
             if( op2 == "IX" || op2 == "IY" ){
-                machineCode.push_back(ixiyPrefix(op2));
-                machineCode.push_back(0b00100010);
+                bytes.push_back(ixiyPrefix(op2));
+                bytes.push_back(0b00100010);
                 generateOperand16(stripParens(op1));
-                return;
+                return {bytes, 2}; // prefix + opcode = 2
             }
 
-            return;
+            return {bytes, -1}; // LD (nn), tipo não reconhecido
         }
 
         // LD r, ...
@@ -317,8 +368,8 @@ void Assembler::generateMachineCode(const std::vector<std::string>& instruction)
 
             // LD r, r'
             if( isReg8(op2) ){
-                machineCode.push_back(0b01000000 | (dst << 3) | reg8Code(op2)); // 01 ddd sss
-                return;
+                bytes.push_back(0b01000000 | (dst << 3) | reg8Code(op2)); // 01 ddd sss
+                return {bytes, -1}; // LD r, r'
             }
 
             if( isInd(op2) ){
@@ -326,53 +377,53 @@ void Assembler::generateMachineCode(const std::vector<std::string>& instruction)
                 if( isIdx(op2) ){
                     uint8_t prefix = ixiyPrefix(op2);
                     int8_t d = parseIdx(op2);
-                    machineCode.push_back(prefix);
-                    machineCode.push_back(0b01000110 | (dst << 3)); // 01 ddd 110
-                    machineCode.push_back(static_cast<uint8_t>(d));
-                    return;
+                    bytes.push_back(prefix);
+                    bytes.push_back(0b01000110 | (dst << 3)); // 01 ddd 110
+                    bytes.push_back(static_cast<uint8_t>(d));
+                    return {bytes, -1}; // LD r, (IX+d)
                 }
 
                 // LD r, (HL)
                 if( op2 == "(HL)" ){
-                    machineCode.push_back(0b01000110 | (dst << 3)); // 01 ddd 110
-                    return;
+                    bytes.push_back(0b01000110 | (dst << 3)); // 01 ddd 110
+                    return {bytes, -1}; // LD r, (HL)
                 }
 
                 // LD A, (nn)
-                machineCode.push_back(0b00111010);
+                bytes.push_back(0b00111010);
                 generateOperand16(stripParens(op2));
-                return;
+                return {bytes, 1};
             }
 
             // LD r, n
-            machineCode.push_back(0b00000110 | (dst << 3)); // 00 ddd 110
+            bytes.push_back(0b00000110 | (dst << 3)); // 00 ddd 110
             generateOperand8(op2);
-            return;
+            return {bytes, 1};
         }
-        return;
+        return {bytes, -1}; // Erro
     }
 
     // JRs
     if( opcode == "JR" ){
         if( op2.empty() ){
             // JR e
-            machineCode.push_back(0b00011000);
+            bytes.push_back(0b00011000);
         } else {
             // JR NZ, e
             // JR Z, e
             uint8_t c = op1 == "NZ" ? 0b100 : 0b101; // 0b100 -> JR NZ; 0b101 -> JR Z
-            machineCode.push_back(c << 3); // 00 ccc 000
+            bytes.push_back(c << 3); // 00 ccc 000
         }
         int displacement = getOperandValue(op2);
         int8_t offset = static_cast<int8_t>(displacement - (locationCounter + 2));
-        machineCode.push_back(static_cast<uint8_t>(offset));
-        return;
+        bytes.push_back(static_cast<uint8_t>(offset));
+        return {bytes, -1};
     }
 
     // JP nn
     if( opcode == "JP" ){
         if( op2.empty() ){ // JP nn
-            machineCode.push_back(0b11000011);
+            bytes.push_back(0b11000011);
             generateOperand16(op1);
         } else{ // JP cc, nn
             uint8_t cc;
@@ -384,17 +435,17 @@ void Assembler::generateMachineCode(const std::vector<std::string>& instruction)
             else if( op1 == "PE" ) cc = 0b101;
             else if( op1 == "P" ) cc = 0b110;
             else cc = 0b111; // M
-            machineCode.push_back(0b11000010 | (cc << 3)); // 11ccc010
+            bytes.push_back(0b11000010 | (cc << 3)); // 11ccc010
             generateOperand16(op2);
         }
-        return;
+        return {bytes, 1};
     }
 
     // CALL nn
     if( opcode == "CALL" ){
-        machineCode.push_back(0b11001101);
+        bytes.push_back(0b11001101);
         generateOperand16(op1);
-        return;
+        return {bytes, 1};
     }
 
     // PUSH qq
@@ -404,8 +455,8 @@ void Assembler::generateMachineCode(const std::vector<std::string>& instruction)
         else if( op1 == "DE" ) qq = 1;
         else if( op1 == "HL" ) qq = 2;
         else qq = 3; // AF
-        machineCode.push_back(0b11000101 | (qq << 4)); // 11qq0101
-        return;
+        bytes.push_back(0b11000101 | (qq << 4)); // 11qq0101
+        return {bytes, -1}; // PUSH
     }
 
     // POP qq
@@ -415,22 +466,22 @@ void Assembler::generateMachineCode(const std::vector<std::string>& instruction)
         else if( op1 == "DE" ) qq = 1;
         else if( op1 == "HL" ) qq = 2;
         else qq = 3; // AF
-        machineCode.push_back(0b11000001 | (qq << 4)); // 11qq0001
-        return;
+        bytes.push_back(0b11000001 | (qq << 4)); // 11qq0001
+        return {bytes, -1}; // POP
     }
 
     // INC r | INC (HL)
     if( opcode == "INC" ){
         uint8_t r = op1 == "(HL)" ? 6 : reg8Code(op1);
-        machineCode.push_back((r << 3) | 0b00000100); // 00rrr100
-        return;
+        bytes.push_back((r << 3) | 0b00000100); // 00rrr100
+        return {bytes, -1}; // INC
     }
 
     // DEC r | DEC (HL)
     if( opcode == "DEC" ){
         uint8_t r = op1 == "(HL)" ? 6 : reg8Code(op1);
-        machineCode.push_back((r << 3) | 0b00000101); // 00rrr101
-        return;
+        bytes.push_back((r << 3) | 0b00000101); // 00rrr101
+        return {bytes, -1}; // DEC
     }
 
     // Aritméticos e lógicos
@@ -454,13 +505,10 @@ void Assembler::generateMachineCode(const std::vector<std::string>& instruction)
         if( source == "(HL)") r = 0b110;
         else r = reg8Code(source);
 
-        machineCode.push_back(0b10000000 | (aluCode << 3) | r);
-        return;
+        bytes.push_back(0b10000000 | (aluCode << 3) | r);
+        return {bytes, -1}; // ALU r/(HL)
     }
-}
-
-void Assembler::insertInTable(const std::string& label, uint value){
-    symbolTable.insert({label, value});
+    return {bytes, -1};
 }
 
 
@@ -473,29 +521,82 @@ int Assembler::getOperandValue(const std::string& operand) {
         return std::stoi(operand.substr(1), 0, 16);
     }
 
-    return findInTable(operand);
+    // Se é externo, deve ser resolvido pelo ligador posteriormente
+    if (usageTable.count(operand)) return -1;
+
+    findInTable(operand).value.value();
 }
 
 
-int Assembler::findInTable(const std::string& label) {
-    if (symbolTable.find(label) == symbolTable.end()) return -1;
+Assembler::Symbol Assembler::findInTable(const std::string& label) {
+    if (symbolTable.find(label) == symbolTable.end()) return {};
+
     return symbolTable.at(label);
 }
 
 
 void Assembler::debug() {
-    std::cout << "Código" << std::endl;
-    for (std::string line : program) {
-        std::cout << line << std::endl;
-    }
+    // std::cout << "Código" << std::endl;
+    // for (std::string line : program) {
+    //     std::cout << line << std::endl;
+    // }
 
-    std::cout << "Tabela de símbolos:" << std::endl;
+    std::cout << "\nTabela de símbolos:" << std::endl;
+    std::cout << "Símbolo" << "\t\t" << "Valor" << "\t\t" << "Tipo" << "\t\t" << "Escopo" << std::endl;
     for (auto it = symbolTable.begin(); it != symbolTable.end(); it++) {
-        std::cout << it->first << "\t\t" << it->second << std::endl;
+        std::string type;
+        std::string scope;
+        switch( it->second.type ){
+            case SymbolType::ABSOLUTE:
+                type = "ABS";
+                break;
+            case SymbolType::RELATIVE:
+                type = "RELAT";
+                break;
+            case SymbolType::NOT_RESOLVED:
+                type = "NOT_RES";
+                break;
+        }
+        
+        switch( it->second.scope ){
+            case SymbolScope::LOCAL:
+                scope = "LOC";
+                break;
+            case SymbolScope::GLOBAL:
+                scope = "GLOB";
+                break;
+            case SymbolScope::EXTERN:
+                scope = "EXT";
+                break;
+        }
+
+        if( it->second.value.has_value() ){
+            std::cout << it->first << "\t\t" << *it->second.value << "\t\t"
+            << type << "\t\t" << scope << std::endl;
+        }else{
+            std::cout << it->first << "\t\t" << "null" << "\t\t"
+            << type << "\t\t" << scope << std::endl;
+        }
     }
 
-    std::cout << "Código de Máquina" << std::endl;
-    for (int byte : machineCode) {
-        std::cout << byte << " ";
-    }
+    // std::cout << "\n INTUSE:" << std::endl;
+    // for (const auto& sym : usageTable) {
+    //     std::cout << sym << std::endl;
+    // }
+
+    // std::cout << "\n INTDEF:" << std::endl;
+    // for (const auto& sym : defTable) {
+    //     std::cout << sym << std::endl;
+    // }
+
+    // std::cout << "\nTabela de Realocação:" << std::endl;
+    // for (auto it: relocationTable) {
+    //     std::cout << it.symbol << "\t\t" << it.offset << "\t\t" << it.size
+    //               << (it.isExternal ? "\texterno" : "\tinterno") << std::endl;
+    // }
+
+    // std::cout << "\nCódigo de Máquina" << std::endl;
+    // for( int byte: machineCode ){
+    //     std::cout << std::setfill('0') << std::setw(2) << std::hex << std::uppercase << byte << " ";
+    // }
 }

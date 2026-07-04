@@ -14,7 +14,8 @@ START       LD      A, @0
 LOOP        LD      A, (COUNTER)
             INC     A
             LD      (COUNTER), A
-            CP      LIMIT
+            LD      B, LIMIT
+            CP      B
             JP      NZ, LOOP
 
             LD      (RESULT), A
