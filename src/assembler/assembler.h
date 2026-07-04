@@ -23,18 +23,21 @@ private:
     typedef struct RelocationItem_t{
         unsigned int offset, size;
         std::string symbol;
+        bool isExt;
     } RelocationItem;
     std::vector<RelocationItem> relocationTable;
     std::vector<std::string> program;
     std::vector<uint8_t> machineCode;
     int startAddress = -1;
     std::string fileName;
+    std::unordered_map<std::string, unsigned int> useTable;  // símbolos externos (INTUSE)
+    std::unordered_map<std::string, unsigned int> defTable;  // símbolos exportados (INTDEF)
     const std::set<std::string> MACHINE_INSTRUCTIONS = {
         "LD", "ADD", "SUB", "INC", "DEC", "AND", "OR", "XOR", "CP", "JP", "JR",
         "CALL","RET", "PUSH", "POP", "NOP", "HALT"
     };
     const std::set<std::string> PSEUDO_INSTRUCTIONS = {
-        "ORG", "END", "EQU", "DS", "DC"
+        "ORG", "END", "EQU", "DS", "DC", "INTUSE", "INTDEF"
     };
 
     void loadFile();

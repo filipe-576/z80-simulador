@@ -104,7 +104,8 @@ unsigned int utils::getInstructionSize(const std::vector<std::string>& instructi
     if (opcode.empty()) return 0;
 
     // Pseudo-instruções que não ocupam memória
-    if (opcode == "ORG" || opcode == "EQU" || opcode == "END") return 0;
+    if (opcode == "ORG" || opcode == "EQU" || opcode == "END" ||
+        opcode == "INTUSE" || opcode == "INTDEF") return 0;
 
     if (opcode == "DS") {
         return parseOperandValue(getOperand(instruction, 0));
