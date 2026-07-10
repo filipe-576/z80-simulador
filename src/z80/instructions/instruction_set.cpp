@@ -2,6 +2,7 @@
 #include "../cpu/cpu.h"
 #include <string>
 
+
 bool getParity(uint8_t val);
 
 uint8_t* registerFromByte(uint8_t regIndex, Registers* registradores);
@@ -252,6 +253,33 @@ bool checkOverflowSub( uint8_t a, uint8_t value, uint8_t res ) {
     return ( (a ^ value) & (a ^ res) & 0x80 ) != 0;
 }
 
+
+std::string regName(uint8_t code)
+{
+    switch (code) {
+        case 0: return "B";
+        case 1: return "C";
+        case 2: return "D";
+        case 3: return "E";
+        case 4: return "H";
+        case 5: return "L";
+        case 6: return "(HL)";
+        case 7: return "A";
+        default: return "?";
+    }
+}
+
+std::string rpName(uint8_t y)
+{
+    switch (y) {
+        case 0: return "BC";
+        case 2: return "DE";
+        case 4: return "HL";
+        case 6: return "AF";
+        default: return "?";
+    }
+}
+
 std::string NomeUnicoDeFunçaoQNExiste(Memory& mem, uint16_t address)
 {
     uint8_t byte = mem.read(address);
@@ -265,12 +293,12 @@ std::string NomeUnicoDeFunçaoQNExiste(Memory& mem, uint16_t address)
         case 0b10:
             switch(y)
             {
-                case 0b000: return "ADD A,r";
-                case 0b010: return "SUB A,r";
-                case 0b100: return "AND r";
-                case 0b101: return "XOR r";
-                case 0b110: return "OR r";
-                case 0b111: return "CP r";
+                case 0b000: return "ADD A," + regName(z);
+                case 0b010: return "SUB A," + regName(z);
+                case 0b100: return "AND " + regName(z);
+                case 0b101: return "XOR " + regName(z);
+                case 0b110: return "OR " + regName(z);
+                case 0b111: return "CP " + regName(z);
             }
             break;
 
@@ -278,20 +306,20 @@ std::string NomeUnicoDeFunçaoQNExiste(Memory& mem, uint16_t address)
             if (y == 0b110 && z == 0b110)
                 return "HALT";
 
-            return "LD r,r";
+            return "LD " + regName(y) + "," + regName(z);
 
         case 0b00:
             if (y == 0 && z == 0)
                 return "NOP";
 
             if (z == 0b110)
-                return "LD r,n";
+                return "LD " + regName(y) + ",n";
 
             if (z == 0b100)
-                return "INC r";
+                return "INC " + regName(y);
 
             if (z == 0b101)
-                return "DEC r";
+                return "DEC " + regName(y);
 
             break;
 
@@ -304,6 +332,12 @@ std::string NomeUnicoDeFunçaoQNExiste(Memory& mem, uint16_t address)
 
             if (z == 0b101 && y == 1)
                 return "CALL nn";
+
+            if (z == 0b101 && ((y & 1) == 0))
+                return "PUSH " + rpName(y);
+
+            if (z == 0b001 && ((y & 1) == 0))
+                return "POP " + rpName(y);
 
             break;
     }

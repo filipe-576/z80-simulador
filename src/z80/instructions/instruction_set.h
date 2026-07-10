@@ -14,7 +14,8 @@ std::string NomeUnicoDeFunçaoQNExiste(Memory& mem, uint16_t address);
  * @param byte
  */
 void instrucao(CPU &cpu, uint8_t byte);
-
+std::string rpName(uint8_t y);
+std::string regName(uint8_t code);
 /**
  * @brief Recebe o opcode e retorna uma referência do registrador correspondente
  *
