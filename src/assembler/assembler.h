@@ -10,6 +10,7 @@
 class Assembler {
 public:
     Assembler(const std::string& fileName);
+    Assembler(const std::string& fileName, const std::string& outputName);
 
 /** 
  * @brief   Executa os dois passos do montador e gera o arquivo objeto
@@ -20,6 +21,7 @@ public:
 
 private:
     std::string fileName;
+    std::string outputName;
     std::vector<std::string> program;
     unsigned int locationCounter;
 
@@ -33,19 +35,14 @@ private:
     };
     std::unordered_map<std::string, Symbol> symbolTable;
 
-    struct RelocationItem{
-        unsigned int offset, size;
-        std::string symbol;
-        bool isExt;
-    };
-
-    std::vector<RelocationItem> relocationTable;
+    std::vector<uint16_t> relocationMap;
     std::vector<std::string> pendingExports; // símbolos externos para resolver depois
-    std::unordered_map<std::string, unsigned int> usageTable;  // símbolos externos (INTUSE)
+    std::unordered_map<std::string, std::vector<unsigned int>> usageTable;  // símbolos externos (INTUSE)
     std::unordered_map<std::string, unsigned int> defTable;  // símbolos exportados (INTDEF)
 
     struct GenerateCodeResult{
         std::vector<uint8_t> bytes;
+        std::string symbolOperand;
         int operandOffset; // -1 se não tiver
     };
     std::vector<uint8_t> machineCode;
@@ -58,7 +55,7 @@ private:
     const std::set<std::string> PSEUDO_INSTRUCTIONS = {
         "END", "EQU", "DS", "DC", "INTUSE", "INTDEF"
     };
-    const std::unordered_map<std::string, uint> OPERATOR_SIZE = {
+    const std::unordered_map<std::string, unsigned int> OPERATOR_SIZE = {
         {"", 1}, {"", 2}
     };
 
@@ -67,6 +64,13 @@ private:
     void firstPass();
 
     void secondPass();
+
+    void generateObjectFile();
+
+/**
+ * @brief   Preenche a tabela de definição.
+ */
+    void resolvePendingExports();
 
 
 /** 
@@ -82,6 +86,12 @@ private:
  */
     Symbol findInTable(const std::string& label);
 
+    void insertInUsageTable(const std::string& symbol, uint16_t address);
+
+/**
+ * @brief   Gera o código de máquina referente à instrução.
+ * @return  Os bytes da instrução e o offset para o operando.
+ */
     GenerateCodeResult generateMachineCode(const std::vector<std::string>& instruction);
 
 };
