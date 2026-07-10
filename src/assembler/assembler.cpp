@@ -178,8 +178,8 @@ void Assembler::generateObjectFile(){
     json_data["definitionTable"] = defTable;
     json_data["useTable"] = usageTable;
     json_data["machineCode"] = machineCode;
-    json_data["relocation_map"] = relocationMap;
-    json_data["start_address"] = startAddress;
+    json_data["relocationMap"] = relocationMap;
+    json_data["startAddress"] = startAddress;
 
     std::ofstream file(outputName);
 
