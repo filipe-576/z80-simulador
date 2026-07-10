@@ -19,6 +19,11 @@ class Linker {
          */
         void linkDebug();
 
+        /**
+         * @brief Exibe a Tabela Global de Simbolo
+         */
+        void printSymbolTable();
+
     private:
         struct Module {
             std::string name;
@@ -40,4 +45,4 @@ class Linker {
          * @brief Lê a saída do assembler, um json com informações dos códigos a serem ligados
          */
         void loadJson(const std::string& fileName); 
-}; 
+};

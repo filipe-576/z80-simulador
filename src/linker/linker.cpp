@@ -33,7 +33,7 @@ void Linker::oPrimeiroPassoDosLinkerBoys(){
 
     int globalOffset = 0;
 
-    for (const auto & module : listModules){
+    for (const auto & module : listModules){  // atribuindo os offsets de cada modulo
         modulesOffsets[module.name] = globalOffset;
 
         for (const auto & symbol : module.definitionTable){
@@ -97,4 +97,14 @@ void Linker::loadJson(const std::string& fileName) {
 
         listModules.push_back(mod);
     }
+}
+
+void Linker::printSymbolTable() {
+    std::cout << "\n======= Tabela Global de Simbolos =======\n";
+    std::cout << "Símbolo\t\t|\tEndereço Absoluto\n";
+    std::cout << "-----------------------------------------------\n";
+    for (const auto& pair : globalSymbolTable) {
+        std::cout << pair.first << "\t\t|\t" << pair.second << "\n";
+    }
+    std::cout << "===============================================\n\n";
 }

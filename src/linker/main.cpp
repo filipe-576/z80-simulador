@@ -11,6 +11,7 @@ int main() {
     std::string jsonPath = std::string(PROJ_DIR) + "/src/linker/modules.json";
     Linker linker(jsonPath);
     linker.Link();
+    linker.printSymbolTable();
     linker.linkDebug();
 
     return 0;
