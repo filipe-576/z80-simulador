@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(z80-simulador LANGUAGES CXX)
+find_package(glfw3 REQUIRED)
+find_package(OpenGL REQUIRED)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -10,21 +12,6 @@ else()
     add_compile_options(-Wall -Wextra)
 endif()
 
-find_package(OpenGL REQUIRED)
-find_package(PkgConfig REQUIRED)
-pkg_search_module(GLFW REQUIRED glfw3)
-
-set(IMGUI_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/imgui")
-set(IMGUI_SOURCES
-    "${IMGUI_DIR}/imgui.cpp"
-    "${IMGUI_DIR}/imgui_demo.cpp"
-    "${IMGUI_DIR}/imgui_draw.cpp"
-    "${IMGUI_DIR}/imgui_tables.cpp"
-    "${IMGUI_DIR}/imgui_widgets.cpp"
-    "${IMGUI_DIR}/backends/imgui_impl_glfw.cpp"
-    "${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp"
-)
-
 # Simulador z80
 add_executable(z80-simulador
     src/vm.cpp
@@ -33,8 +20,18 @@ add_executable(z80-simulador
     src/z80/memory/memory.cpp
     src/z80/instructions/instruction_set.cpp
     src/z80/gui/gui.cpp
-    ${IMGUI_SOURCES}
-    src/z80/gui/log.cpp
+    
+    external/imgui/imgui.cpp
+    external/imgui/imgui_draw.cpp
+    external/imgui/imgui_tables.cpp
+    external/imgui/imgui_widgets.cpp
+    external/imgui/backends/imgui_impl_glfw.cpp
+    external/imgui/backends/imgui_impl_opengl3.cpp
+    external/imgui/imgui_demo.cpp
+)
+target_link_libraries(z80-simulador PRIVATE
+    glfw
+    OpenGL::GL
 )
 
 target_include_directories(z80-simulador PRIVATE
@@ -42,27 +39,7 @@ target_include_directories(z80-simulador PRIVATE
     src/z80/memory
     src/z80/instructions
     src/z80/gui
-    ${IMGUI_DIR}
-    ${IMGUI_DIR}/backends
-    ${GLFW_INCLUDE_DIRS}
 )
-
-target_link_libraries(z80-simulador PRIVATE
-    ${GLFW_LDFLAGS}
-    OpenGL::GL
-)
-
-if(APPLE)
-    find_library(COCOA_FRAMEWORK Cocoa)
-    find_library(IOKIT_FRAMEWORK IOKit)
-    find_library(COREVIDEO_FRAMEWORK CoreVideo)
-    target_link_libraries(z80-simulador PRIVATE
-        ${COCOA_FRAMEWORK}
-        ${IOKIT_FRAMEWORK}
-        ${COREVIDEO_FRAMEWORK}
-    )
-endif()
-
 
 # Processador de Macros
 add_executable(macro_processor
@@ -92,4 +69,10 @@ add_executable(linker
 
 target_include_directories(linker PRIVATE
     src/linker
+)
+
+target_include_directories(z80-simulador PRIVATE
+    external/imgui
+    external/imgui/backends
+    
 )

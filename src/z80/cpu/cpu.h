@@ -15,7 +15,7 @@ public:
  */
     void reset();
 
-
+    void reset_Gui();
 /** 
  * @brief   Executa um passo do programa. Pega o próximo byte e executa a instrução correspondente.
  * 
@@ -62,6 +62,7 @@ public:
  * @return  Valor de 16 bits que estava no topo da pilha
  */
     uint16_t pop();
+
 
 
     private:

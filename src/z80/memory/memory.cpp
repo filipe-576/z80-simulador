@@ -42,7 +42,6 @@ const uint8_t* Memory::get_array() const
 {
     return mem.data();
 }
-// NAO MEXER NESSE BGL !!!!!! 
 uint8_t* Memory::Outro_get_array() {
     return mem.data();
 }

@@ -1,229 +1,11 @@
 #include "instruction_set.h"
-#include "../cpu/cpu.h"
+#include "cpu.h"
+#include <iostream>
+#include <bitset>
+#include <cstdint>
 
-bool getParity(uint8_t val);
-
-uint8_t* registerFromByte(uint8_t regIndex, Registers* registradores);
-
-void instrucao(CPU &cpu, uint8_t byte){
-
-    Registers& regis = cpu.getRegisters();
-
-    uint8_t op = (byte & 0b11000000) >> 6;
-
-    uint8_t y = (byte & 0b00111000) >> 3;
-
-    uint8_t z = (byte & 0b00000111);
-
-    uint8_t* reg, *reg2;
-
-    switch(op) {
-        case 0b10:
-            switch(y) {
-                case 0b100: { // AND r
-                    reg = registerFromByte( z, &regis );                   
-                    regis.A &= (*reg);
-
-                    regis.F.S = (regis.A & 0x80) != 0;
-                    regis.F.Z = (regis.A == 0);
-                    regis.F.H = true;
-                    regis.F.PV = getParity(regis.A);
-                    regis.F.N = false;
-                    regis.F.C = false;
-                    break;
-                }
-                case 0b110: { // OR r
-                    reg = registerFromByte( z, &regis );                   
-                    regis.A |= (*reg);
-
-                    regis.F.S = (regis.A & 0x80) != 0;
-                    regis.F.Z = (regis.A == 0);
-                    regis.F.H = false;
-                    regis.F.PV = getParity(regis.A);
-                    regis.F.N = false;
-                    regis.F.C = false;
-                    break;
-                }
-
-                case 0b111: { // CP r
-                    reg = registerFromByte( z, &regis );
-                    uint8_t val = *reg;
-                    uint16_t res = regis.A - val;
-
-                    regis.F.S = (res & 0x80) != 0;
-                    regis.F.Z = ((uint8_t)res == 0);
-                    regis.F.H = ((regis.A & 0x0F) < (val & 0x0F));
-                    regis.F.PV = checkOverflowAdd(regis.A, val, res);
-                    regis.F.N = true;
-                    regis.F.C = (regis.A < val);
-                    break;
-                }
-                
-                case 0b101: { // XOR r
-                    reg = registerFromByte( z, &regis );                   
-                    regis.A ^= (*reg);
-
-                    regis.F.S = (regis.A & 0x80) != 0;
-                    regis.F.Z = (regis.A == 0);
-                    regis.F.H = false;
-                    regis.F.PV = getParity(regis.A);
-                    regis.F.N = false;
-                    regis.F.C = false;
-                    break;
-                }
-                
-                case 0b000: { // ADD A, r
-                    reg = registerFromByte( z, &regis );                   
-                    uint8_t val = *reg;
-                    uint16_t res = regis.A + val;
-
-                    regis.F.S = (res & 0x80) != 0;
-                    regis.F.Z = ((uint8_t)res == 0);
-                    regis.F.H = ((regis.A & 0x0F) + (val & 0x0F)) > 0x0F;
-                    regis.F.PV = checkOverflowAdd(regis.A, val, res);
-                    regis.F.N = false;
-                    regis.F.C = (res > 0xFF);
-
-                    regis.A = (uint8_t)res;
-                    break;
-                }
-
-                case 0b010: { // SUB A, r
-                    reg = registerFromByte( z, &regis );                   
-                    uint8_t val = *reg;
-                    uint16_t res = regis.A - val;
-
-                    regis.F.S = (res & 0x80) != 0;
-                    regis.F.Z = ((uint8_t)res == 0);
-                    regis.F.H = ((regis.A & 0x0F) < (val & 0x0F));
-                    regis.F.PV = checkOverflowSub(regis.A, val, res);
-                    regis.F.N = true;
-                    regis.F.C = (regis.A < val);
-
-                    regis.A = (uint8_t)res;
-                    break;
-                }
-
-            }
-
-            break;
-        case 0b01:
-            switch(y) {
-                case 0b110: // LD (HL), r ou HALT
-
-                    if (z == 0b110){ // HALT
-                        cpu.setHalted(true);
-                    }
-                    else{ // LD (HL), r
-                        uint16_t hl = regis.HL();
-                        reg = registerFromByte(z, &regis);
-                        cpu.mem.write(hl, *reg);
-                    }
-            } 
-            if (z == 0b110){ // LD r, (HL)
-               // 
-            }
-
-            else { // LD r, r'
-                reg = registerFromByte(y, &regis);
-                reg2 = registerFromByte(z, &regis);
-                if (reg && reg2) *reg = *reg2;
-            }
-
-            break;
-
-        case 0b00:
-            switch (y) {
-                case 0b000: // NOP
-                    break;
-
-                case 0b011: 
-                    if (z == 0b000) {} // TODO JR offset
-                    break;
-            }
-            
-            switch (z) {
-                case 0b110: // LD r, n
-                    reg = registerFromByte(y, &regis);
-                    *reg = cpu.fetch8(); 
-                    break;
-
-                case 0b100: { // INC r
-                    reg = registerFromByte(y, &regis);
-                    uint8_t old = *reg;
-                    *reg += 1;
-                    
-                    regis.F.S = (*reg & 0x80) != 0;
-                    regis.F.Z = (*reg == 0);
-                    regis.F.H = (old & 0x0F) == 0x0F;
-                    regis.F.PV = (old == 0x7F);
-                    regis.F.N = false;
-                    break;
-                }
-
-                case 0b101: { // DEC r
-                    reg = registerFromByte(y, &regis);
-                    uint8_t old = *reg;
-                    *reg -= 1;
-
-                    regis.F.S = (*reg & 0x80) != 0;
-                    regis.F.Z = (*reg == 0);
-                    regis.F.H = (old & 0x0F) == 0x00;
-                    regis.F.PV = (old == 0x80);
-                    regis.F.N = true;
-                    break;
-                }
-            }
-
-            break;
-
-        case 0b11:
-            switch(z) {
-                case 0b101:
-                    if (y == 0b001) { // CALL addr
-                        uint16_t addr = cpu.fetch16();
-                        cpu.push(regis.PC);
-                        regis.PC = addr;
-                    } 
-                    else if ((y & 0b001) == 0) { // PUSH rp
-                        uint16_t val;
-                        if (y == 0)      val = regis.BC();
-                        else if (y == 2) val = regis.DE();
-                        else if (y == 4) val = regis.HL();
-                        else             val = regis.AF(); // y=6
-                        cpu.push(val);
-                    }
-                    break;
-                    
-                case 0b001: // z=1: POP rp ou RET
-                    if (y == 0b001) { // RET
-                        regis.PC = cpu.pop();
-                    } 
-                    else if ((y & 0b001) == 0) { // POP rp
-                        uint16_t val = cpu.pop();
-                        if (y == 0)      regis.setBC(val);
-                        else if (y == 2) regis.setDE(val);
-                        else if (y == 4) regis.setHL(val);
-                        else { // y=6 -> POP AF
-                            regis.A = (val >> 8);
-                            regis.F.fromByte(val & 0xFF);
-                        }
-                    }
-                    break;
-                
-                case 0b011: // z=3: JP addr
-                    if (y == 0) { // JP addr (C3)
-                        regis.PC = cpu.fetch16();
-                    }
-                    break;
-            }
-            break;
-
-    }
-}
-
-uint8_t* registerFromByte(uint8_t regIndex, Registers* registradores){
-    switch(regIndex) {
+uint8_t* registerFromByte(uint8_t regIndex, Registers* registradores) {
+    switch (regIndex) {
         case 0b000: return &(registradores->B);
         case 0b001: return &(registradores->C);
         case 0b010: return &(registradores->D);
@@ -235,18 +17,871 @@ uint8_t* registerFromByte(uint8_t regIndex, Registers* registradores){
     }
 }
 
- bool getParity(uint8_t val){
-    int count = 0;
-    for (int i = 0; i < 8; i++) {
-        if (val & (1 << i)) count++;
+bool getParity(uint8_t val) {
+    uint8_t count = 0;
+
+    for (uint8_t i = 0; i < 8; i++) {
+        if (val & (1 << i)) {
+            count++;
+        }
     }
+
     return (count % 2 == 0);
 }
 
-bool checkOverflowAdd( uint8_t a, uint8_t value, uint8_t res ) {
-    return ( (a ^ res) & (value ^ res) & 0x80 ) != 0;
+
+bool checkOverflowAdd(uint8_t a, uint8_t value, uint16_t res) {
+    // O overflow de adição no Z80 ocorre quando o sinal dos operandos é igual, mas diferente do sinal do resultado.
+    return ((a ^ res) & (value ^ res) & 0x80) != 0;
 }
 
-bool checkOverflowSub( uint8_t a, uint8_t value, uint8_t res ) {
-    return ( (a ^ value) & (a ^ res) & 0x80 ) != 0;
+
+bool checkOverflowSub(uint8_t a, uint8_t value, uint16_t res) {
+    // O overflow de subtração ocorre quando os sinais dos operandos são diferentes e o sinal do resultado difere do minuendo.
+    return ((a ^ value) & (a ^ res) & 0x80) != 0;
+}
+
+
+uint8_t readRegOrHL(CPU& cpu, uint8_t index) {
+    // O índice 6 (0b110) não mapeia para um registrador interno, mas sim para o dado na memória apontada por HL.
+    if (index == 0b110) {
+        return cpu.mem.read(cpu.getRegisters().HL());
+    }
+
+    uint8_t* reg = registerFromByte(index, &cpu.getRegisters());
+
+    return *reg;
+}
+
+
+void writeRegOrHL(CPU& cpu, uint8_t index, uint8_t value) {
+    // Mantém a transparência do barramento: desvia a escrita para a RAM se o índice alvo for o 6.
+    if (index == 0b110) {
+        cpu.mem.write(cpu.getRegisters().HL(), value);
+    } else {
+        uint8_t* reg = registerFromByte(index, &cpu.getRegisters());
+        *reg = value;
+    }
+}
+
+
+void executeInstruction(CPU& cpu, uint8_t byte) {
+    Registers& regis = cpu.getRegisters();
+
+    // A estrutura binária do opcode do Z80 (xx yyy zzz) categoriza a classe, registrador alvo e operação.
+    uint8_t op = (byte & 0b11000000) >> 6;
+    uint8_t y = (byte & 0b00111000) >> 3;
+    uint8_t z = (byte & 0b00000111);
+
+    // Impressão visual dos campos extraídos para auxiliar no log de depuração do emulador.
+    std::cout << std::bitset<8>(op) << '\n';
+    std::cout << std::bitset<8>(y) << '\n';
+    std::cout << std::bitset<8>(z) << std::endl;
+
+    uint8_t* reg;
+    uint8_t* reg2;
+
+    switch (op) {
+        case 0b10: // 10xxxxxx
+            switch (y) {
+                case 0b100: { // AND r
+                    // Zera os bits configurados na máscara (AND) para realizar testes lógicos no Acumulador.
+                    uint8_t val = readRegOrHL(cpu, z);                   
+                    regis.A &= val;
+
+                    regis.F.S = (regis.A & 0x80) != 0;
+                    regis.F.Z = (regis.A == 0);
+                    regis.F.H = true;
+                    regis.F.PV = getParity(regis.A);
+                    regis.F.N = false;
+                    regis.F.C = false;
+
+                    break;
+                }
+
+                case 0b110: { // OR r
+                    // Combina bits através de OR lógico para setar flags lógicas sem afetar o transporte (Carry).
+                    uint8_t val = readRegOrHL(cpu, z);                   
+                    regis.A |= val;
+
+                    regis.F.S = (regis.A & 0x80) != 0;
+                    regis.F.Z = (regis.A == 0);
+                    regis.F.H = false;
+                    regis.F.PV = getParity(regis.A);
+                    regis.F.N = false;
+                    regis.F.C = false;
+
+                    break;
+                }
+
+                case 0b111: { // CP r
+                    // Executa subtração virtual para comparar valores (CP), atualizando as flags sem alterar o Acumulador.
+                    uint8_t val = readRegOrHL(cpu, z);
+                    uint16_t res = regis.A - val;
+
+                    regis.F.S = (res & 0x80) != 0;
+                    regis.F.Z = ((uint8_t)res == 0);
+                    regis.F.H = ((regis.A & 0x0F) < (val & 0x0F));
+                    regis.F.PV = checkOverflowSub(regis.A, val, res);
+                    regis.F.N = true;
+                    regis.F.C = (regis.A < val);
+
+                    break;
+                }
+                
+                case 0b101: { // XOR r
+                    // Operador XOR inverte os bits, sendo uma técnica eficiente e clássica para zerar o Acumulador.
+                    uint8_t val = readRegOrHL(cpu, z);                   
+                    regis.A ^= val;
+
+                    regis.F.S = (regis.A & 0x80) != 0;
+                    regis.F.Z = (regis.A == 0);
+                    regis.F.H = false;
+                    regis.F.PV = getParity(regis.A);
+                    regis.F.N = false;
+                    regis.F.C = false;
+
+                    break;
+                }
+                
+                case 0b000: { // ADD A, r
+                    // Adição aritmética: atualiza o acumulador e registra transporte (Carry) ou transbordo (Overflow).                 
+                    uint8_t val = readRegOrHL(cpu, z);
+                    uint16_t res = regis.A + val;
+
+                    regis.F.S = (res & 0x80) != 0;
+                    regis.F.Z = ((uint8_t)res == 0);
+                    regis.F.H = ((regis.A & 0x0F) + (val & 0x0F)) > 0x0F;
+                    regis.F.PV = checkOverflowAdd(regis.A, val, res);
+                    regis.F.N = false;
+                    regis.F.C = (res > 0xFF);
+
+                    regis.A = static_cast<uint8_t>(res);
+
+                    break;
+                }
+
+                case 0b010: { // SUB A, r
+                    // Subtração aritmética real, diferente do CP que apenas simula o resultado.
+                    uint8_t val = readRegOrHL(cpu, z);
+                    uint16_t res = regis.A - val;
+
+                    regis.F.S = (res & 0x80) != 0;
+                    regis.F.Z = ((uint8_t)res == 0);
+                    regis.F.H = ((regis.A & 0x0F) < (val & 0x0F));
+                    regis.F.PV = checkOverflowSub(regis.A, val, res);
+                    regis.F.N = true;
+                    regis.F.C = (regis.A < val);
+
+                    regis.A = static_cast<uint8_t>(res);
+
+                    break;
+                }
+            }
+            break;
+
+        case 0b01: // 01xxxxxx
+            // Interrompe o processador intencionalmente, congelando o pipeline até o próximo interrupt.
+            if (y == 0b110 && z == 0b110) { // HALT
+                cpu.setHalted(true);
+            }
+            // Move os dados do registrador para o endereço físico mapeado no par HL.
+            else if (y == 0b110) { // LD (HL), r
+                uint16_t hl = regis.HL();
+                reg = registerFromByte(z, &regis);
+                cpu.mem.write(hl, *reg);
+            }
+            // Lê um byte do endereço de memória salvo em HL e alimenta o registrador.
+            else if (z == 0b110) { // LD r, (HL)
+               uint16_t hl = regis.HL();
+               reg = registerFromByte(y, &regis);
+               *reg = cpu.mem.read(hl);
+            }
+            // Movimentação trivial (cópia de barramento interno) entre registradores base.
+            else { // LD r, r'
+                reg = registerFromByte(y, &regis);
+                reg2 = registerFromByte(z, &regis);
+
+                if (reg && reg2) {
+                    *reg = *reg2;
+                }
+            }
+            break;
+
+        case 0b00: // 00xxxxxx
+            if (z == 0b010){ // 00xxx010
+                if (y == 0b111){ // LD A, (nn)
+                    uint16_t address = cpu.fetch16();
+                    uint8_t value = cpu.mem.read(address);
+                    regis.A = value;
+                }
+                else if (y == 0b110){ // LD (nn), A
+                    uint8_t value = regis.A;
+                    uint16_t address = cpu.fetch16();
+                    cpu.mem.write(address, value);
+                }
+            }
+            // Carga imediata: insere a constante (n) que acompanha o opcode no destino designado.
+            else if (z == 0b110) { // LD r, n
+                uint8_t n = cpu.fetch8();
+                writeRegOrHL(cpu, y, n);
+            }
+            // Incrementa o alvo em 1 de forma atômica (útil para loops em registradores contadores).
+            else if (z == 0b100) { // INC r
+                uint8_t oldVal = readRegOrHL(cpu, y);
+                uint8_t newVal = oldVal + 1;
+                writeRegOrHL(cpu, y, newVal);
+                
+                regis.F.S = (newVal & 0x80) != 0;
+                regis.F.Z = (newVal == 0);
+                regis.F.H = (oldVal & 0x0F) == 0x0F;
+                regis.F.PV = (oldVal == 0x7F);
+                regis.F.N = false;
+            }
+            // Decrementa o alvo, geralmente utilizado na finalização de iterações do assembly (ex: DJNZ).
+            else if (z == 0b101) { // DEC r
+                uint8_t oldVal = readRegOrHL(cpu, y);
+                uint8_t newVal = oldVal - 1;
+                writeRegOrHL(cpu, y, newVal);
+
+                regis.F.S = (newVal & 0x80) != 0;
+                regis.F.Z = (newVal == 0);
+                regis.F.H = (oldVal & 0x0F) == 0x00;
+                regis.F.PV = (oldVal == 0x80);
+                regis.F.N = true;
+            }
+            // Opcode que demanda salto no fluxo (Jump) ou Nenhuma Operação (ciclos de delay).
+            else if (z == 0b000) { // 00xxx000
+                switch (y) {
+                    case 0b000:
+                        // NOP: Não altera registradores nem a memória, mas consome tempo de relógio.
+                        break;
+
+                    case 0b011:{
+                        // JR: Salto relativo, usa um signed offset para pular código para frente ou trás.
+                        int8_t offset = static_cast<int8_t>(cpu.fetch8()); 
+                        regis.PC += offset;
+                        break;
+                    }
+                    
+                    case 0b100:{ // JR NZ, e                        
+                        int8_t offset = static_cast<int8_t>(cpu.fetch8());
+                        if( !regis.F.Z ){
+                            regis.PC += offset;
+                        }
+                        break;
+                    }
+
+                    case 0b101:{ // JR Z, e
+                        int8_t offset = static_cast<int8_t>(cpu.fetch8());
+                        if( regis.F.Z ){
+                            regis.PC += offset;
+                        }
+                        break;
+                    }
+                }
+            }
+            break;
+        
+        case 0b11: // 11xxxxxx
+            switch (z) {
+                case 0b101: // 11xxx101
+                    // Desvio de rotina que empilha o PC de retorno antes de voar para o destino.
+                    if (y == 0b001) { // CALL nn
+                        uint16_t address = cpu.fetch16();
+                        cpu.push(regis.PC);
+                        regis.PC = address;
+                    }
+                    // Salva contextualmente os registradores pareados no topo da pilha.
+                    else if ((y & 0b001) == 0) { // PUSH qq
+                        uint16_t val;
+
+                        if (y == 0)      val = regis.BC();
+                        else if (y == 2) val = regis.DE();
+                        else if (y == 4) val = regis.HL();
+                        else             val = regis.AF();
+
+                        cpu.push(val);
+                    }
+                    // LD com IX ou IY
+                    else if (y == 0b011){  // 11011101 xxxxxxxx LD IX, (nn) | LD IX, nn | LD (nn), IX
+                        uint8_t nextByte = cpu.fetch8();
+
+                        uint8_t opNextByte = (nextByte & 0b11000000) >> 6;
+                        uint8_t yNextByte = (nextByte & 0b00111000) >> 3;
+                        uint8_t zNextByte = (nextByte & 0b00000111);
+
+                        if ( nextByte == 0b00100001 ){ // LD IX, nn
+                            uint8_t low = cpu.fetch8();
+                            uint8_t high = cpu.fetch8();
+
+                            regis.IX = high;
+                            regis.IX = regis.IX << 8;
+                            regis.IX += low;
+                        }
+
+                        else if ( nextByte == 0b00101010 ){ // LD IX, (nn)
+                            uint16_t address = cpu.fetch16();
+                            uint8_t low = cpu.mem.read(address);
+                            address = cpu.fetch16();
+                            uint8_t high = cpu.mem.read(address);
+
+                            regis.IX = high;
+                            regis.IX = regis.IX << 8;
+                            regis.IX += low;
+                        }
+
+                        else if( nextByte == 0b00100010 ){ // LD (nn), IX
+                            uint8_t high = regis.IX >> 8;
+                            uint8_t low = regis.IX; // Implicitamente usa a parte baixa na conversão
+                            uint16_t address = cpu.fetch16();
+                            cpu.mem.write(address, low);
+                            address = cpu.fetch16();
+                            cpu.mem.write(address, high);
+                        }
+                        
+                        else { // LD com deslocamento
+
+                            int8_t offset = (int8_t)cpu.fetch8(); // tem que ser com sinal pq pode ser negativo
+
+                            if (nextByte == 0b00110110){ // LD (IX + d), n
+                                uint16_t address = regis.IX + offset;
+                                uint8_t value = cpu.fetch8();
+                                cpu.mem.write(address, value);
+                                
+                            }
+                            else if (opNextByte == 0b01 && zNextByte == 0b110){ // LD r, (IX + d)
+                                uint16_t address = regis.IX + offset;
+                                reg = registerFromByte(yNextByte, &regis);
+                                *reg = cpu.mem.read(address);
+                                
+                            }
+                            else if (opNextByte == 0b01 && yNextByte == 0b110){ // LD (IX + d), r
+                                uint16_t address = regis.IX + offset;
+                                reg = registerFromByte(zNextByte, &regis);
+                                cpu.mem.write(address, *reg);
+                            }
+                        }
+                    }
+
+                    else if (y == 0b111){ // 11111101 xxxxxxxx LD IY, (nn) | LD IY, nn | LD (nn), IY
+                        uint8_t nextByte = cpu.fetch8();
+
+                        uint8_t opNextByte = (nextByte & 0b11000000) >> 6;
+                        uint8_t yNextByte = (nextByte & 0b00111000) >> 3;
+                        uint8_t zNextByte = (nextByte & 0b00000111);
+
+                        if ( nextByte == 0b00100001 ){ // LD IY, nn
+                            uint8_t low = cpu.fetch8();
+                            uint8_t high = cpu.fetch8();
+
+                            regis.IY = high;
+                            regis.IY = regis.IY << 8;
+                            regis.IY += low;
+                        }
+
+                        else if ( nextByte == 0b00101010 ){ // LD IY, (nn)
+                            uint16_t address = cpu.fetch16();
+                            uint8_t low = cpu.mem.read(address);
+                            address = cpu.fetch16();
+                            uint8_t high = cpu.mem.read(address);
+
+                            regis.IY = high;
+                            regis.IY = regis.IY << 8;
+                            regis.IY += low;
+                        }
+
+                        else if( nextByte == 0b00100010 ){ // LD (nn), IY
+                            uint8_t high = regis.IY >> 8;
+                            uint8_t low = regis.IY; // Implicitamente usa a parte baIYa na conversão
+                            uint16_t address = cpu.fetch16();
+                            cpu.mem.write(address, low);
+                            address = cpu.fetch16();
+                            cpu.mem.write(address, high);
+                        }
+                        
+                        else { // LD com deslocamento
+
+                            int8_t offset = (int8_t)cpu.fetch8(); // tem que ser com sinal pq pode ser negativo
+
+                            if (nextByte == 0b00110110){ // LD (IY + d), n
+                                uint16_t address = regis.IY + offset;
+                                uint8_t value = cpu.fetch8();
+                                cpu.mem.write(address, value);
+                                
+                            }
+                            else if (opNextByte == 0b01 && zNextByte == 0b110){ // LD r, (IY + d)
+                                uint16_t address = regis.IY + offset;
+                                reg = registerFromByte(yNextByte, &regis);
+                                *reg = cpu.mem.read(address);
+                                
+                            }
+                            else if (opNextByte == 0b01 && yNextByte == 0b110){ // LD (IY + d), r
+                                uint16_t address = regis.IY + offset;
+                                reg = registerFromByte(zNextByte, &regis);
+                                cpu.mem.write(address, *reg);
+                            }
+                        }
+                    }
+                    break;
+                    
+                case 0b001:
+                    // Retorno incondicional que desempilha o endereço chamador guardado pelo último CALL.
+                    if (y == 0b001) { // RET
+                        regis.PC = cpu.pop();
+                    }
+                    // Recupera um par de registradores de 16 bits removendo da pilha (Stack Memory).
+                    else if ((y & 0b001) == 0) { // POP qq
+                        uint16_t val = cpu.pop();
+
+                        if (y == 0)      regis.setBC(val);
+                        else if (y == 2) regis.setDE(val);
+                        else if (y == 4) regis.setHL(val);
+                        else {
+                            regis.A = (val >> 8);
+                            regis.F.fromByte(val & 0xFF);
+                        }
+                    }
+                    break;
+                
+                case 0b010: { // JP cc, nn / 11 ccc 010
+                    uint16_t address = cpu.fetch16();
+                    bool cond;
+                    switch (y) {
+                        case 0b000: cond = !regis.F.Z;  break; // NZ
+                        case 0b001: cond =  regis.F.Z;  break; // Z
+                        case 0b010: cond = !regis.F.C;  break; // NC
+                        case 0b011: cond =  regis.F.C;  break; // C
+                        case 0b100: cond = !regis.F.PV; break; // PO
+                        case 0b101: cond =  regis.F.PV; break; // PE
+                        case 0b110: cond = !regis.F.S;  break; // P (Positivo)
+                        case 0b111: cond =  regis.F.S;  break; // M (Negativo)
+                        default:    cond = false;        break;
+                    }
+                    if (cond) {
+                        regis.PC = address;
+                    }
+                    break;
+                }
+
+                case 0b011:
+                    // Desvio direto do Program Counter (PC) baseado no endereço lido (Jump absoluto).
+                    if (y == 0) { // JP nn
+                        regis.PC = cpu.fetch16();
+                    }
+                    break;
+            }
+            break;
+    }
+}
+
+static std::string hex8(uint8_t value)
+{
+    const char* digits = "0123456789ABCDEF";
+    std::string result = "0x00";
+    result[2] = digits[(value >> 4) & 0x0F];
+    result[3] = digits[value & 0x0F];
+    return result;
+}
+
+static std::string hex16(uint16_t value)
+{
+    const char* digits = "0123456789ABCDEF";
+    std::string result = "0x0000";
+    result[2] = digits[(value >> 12) & 0x0F];
+    result[3] = digits[(value >> 8) & 0x0F];
+    result[4] = digits[(value >> 4) & 0x0F];
+    result[5] = digits[value & 0x0F];
+    return result;
+}
+std::string regName(uint8_t code)
+{
+    switch (code) {
+        case 0: return "B";
+        case 1: return "C";
+        case 2: return "D";
+        case 3: return "E";
+        case 4: return "H";
+        case 5: return "L";
+        case 6: return "(HL)";
+        case 7: return "A";
+        default: return "?";
+    }
+}
+
+std::string rpName(uint8_t y)
+{
+    switch (y) {
+        case 0: return "BC";
+        case 2: return "DE";
+        case 4: return "HL";
+        case 6: return "AF";
+        default: return "?";
+    }
+}
+
+static std::string displacementText(int8_t displacement)
+{
+    if (displacement < 0) {
+        return " - " + std::to_string(-static_cast<int>(displacement));
+    }
+    return " + " + std::to_string(static_cast<int>(displacement));
+}
+
+static std::string condicional(uint8_t code)
+{
+    switch (code & 0b111) {
+        case 0: return "NZ";
+        case 1: return "Z";
+        case 2: return "NC";
+        case 3: return "C";
+        case 4: return "PO";
+        case 5: return "PE";
+        case 6: return "P";
+        case 7: return "M";
+        default: return "?";
+    }
+}
+
+static uint16_t verMem16(
+    const Memory& mem,
+    uint16_t address)
+{
+    uint16_t lowByte = mem.read(address);
+
+    uint16_t highByte = mem.read(
+        static_cast<uint16_t>(address + 1)
+    );
+
+    return static_cast<uint16_t>(
+        lowByte | (highByte << 8)
+    );
+}
+
+static std::string decodificadorAux(
+    const Memory& mem,
+    uint16_t address,
+    const std::string& indexName)
+{
+    uint8_t nextByte = mem.read(
+        static_cast<uint16_t>(address + 1)
+    );
+
+    uint8_t op = (nextByte >> 6) & 0b11;
+    uint8_t y = (nextByte >> 3) & 0b111;
+    uint8_t z = nextByte & 0b111;
+
+    // LD IX/IY,nn
+    if (nextByte == 0x21) {
+        uint16_t value = verMem16(
+            mem,
+            static_cast<uint16_t>(address + 2)
+        );
+
+        return "LD " + indexName + "," + hex16(value);
+    }
+
+    // LD IX/IY,(nn)
+    if (nextByte == 0x2A) {
+        uint16_t absoluteAddress = verMem16(
+            mem,
+            static_cast<uint16_t>(address + 2)
+        );
+
+        return "LD " + indexName +
+               ",(" + hex16(absoluteAddress) + ")";
+    }
+
+    // LD (nn),IX/IY
+    if (nextByte == 0x22) {
+        uint16_t absoluteAddress = verMem16(
+            mem,
+            static_cast<uint16_t>(address + 2)
+        );
+
+        return "LD (" + hex16(absoluteAddress) +
+               ")," + indexName;
+    }
+
+    // LD (IX/IY+d),n
+    if (nextByte == 0x36) {
+        int8_t displacement = static_cast<int8_t>(
+            mem.read(
+                static_cast<uint16_t>(address + 2)
+            )
+        );
+
+        uint8_t value = mem.read(
+            static_cast<uint16_t>(address + 3)
+        );
+
+        return "LD (" + indexName +
+               displacementText(displacement) +
+               ")," + hex8(value);
+    }
+
+    // LD r,(IX/IY+d)
+    if (
+        op == 0b01 &&
+        z == 0b110 &&
+        y != 0b110
+    ) {
+        int8_t displacement = static_cast<int8_t>(
+            mem.read(
+                static_cast<uint16_t>(address + 2)
+            )
+        );
+
+        return "LD " + regName(y) +
+               ",(" + indexName +
+               displacementText(displacement) + ")";
+    }
+
+    // LD (IX/IY+d),r
+    if (
+        op == 0b01 &&
+        y == 0b110 &&
+        z != 0b110
+    ) {
+        int8_t displacement = static_cast<int8_t>(
+            mem.read(
+                static_cast<uint16_t>(address + 2)
+            )
+        );
+
+        return "LD (" + indexName +
+               displacementText(displacement) +
+               ")," + regName(z);
+    }
+
+    return "???";
+}
+
+std::string decodificadorPrincipal(
+    const Memory& mem,
+    uint16_t address)
+{
+    uint8_t byte = mem.read(address);
+
+    uint8_t op = (byte >> 6) & 0b11;
+    uint8_t y = (byte >> 3) & 0b111;
+    uint8_t z = byte & 0b111;
+
+    switch (op) {
+        case 0b10:
+            switch (y) {
+                case 0b000:
+                    return "ADD A," + regName(z);
+
+                case 0b010:
+                    return "SUB " + regName(z);
+
+                case 0b100:
+                    return "AND " + regName(z);
+
+                case 0b101:
+                    return "XOR " + regName(z);
+
+                case 0b110:
+                    return "OR " + regName(z);
+
+                case 0b111:
+                    return "CP " + regName(z);
+
+                default:
+                    return "???";
+            }
+
+        case 0b01:
+            if (y == 0b110 && z == 0b110) {
+                return "HALT";
+            }
+
+            return "LD " + regName(y) +
+                   "," + regName(z);
+
+        case 0b00:
+            // LD (nn),A
+            if (z == 0b010 && y == 0b110) {
+                uint16_t absoluteAddress = verMem16(
+                    mem,
+                    static_cast<uint16_t>(address + 1)
+                );
+
+                return "LD (" +
+                       hex16(absoluteAddress) +
+                       "),A";
+            }
+
+            // LD A,(nn)
+            if (z == 0b010 && y == 0b111) {
+                uint16_t absoluteAddress = verMem16(
+                    mem,
+                    static_cast<uint16_t>(address + 1)
+                );
+
+                return "LD A,(" +
+                       hex16(absoluteAddress) +
+                       ")";
+            }
+
+            // LD r,n
+            if (z == 0b110) {
+                uint8_t value = mem.read(
+                    static_cast<uint16_t>(address + 1)
+                );
+
+                return "LD " + regName(y) +
+                       "," + hex8(value);
+            }
+
+            // INC r
+            if (z == 0b100) {
+                return "INC " + regName(y);
+            }
+
+            // DEC r
+            if (z == 0b101) {
+                return "DEC " + regName(y);
+            }
+
+            if (z == 0b000) {
+                switch (y) {
+                    case 0b000:
+                        return "NOP";
+
+                    case 0b011: {
+                        int8_t displacement =
+                            static_cast<int8_t>(
+                                mem.read(
+                                    static_cast<uint16_t>(
+                                        address + 1
+                                    )
+                                )
+                            );
+
+                        uint16_t target =
+                            static_cast<uint16_t>(
+                                address + 2 + displacement
+                            );
+
+                        return "JR " + hex16(target);
+                    }
+
+                    case 0b100: {
+                        int8_t displacement =
+                            static_cast<int8_t>(
+                                mem.read(
+                                    static_cast<uint16_t>(
+                                        address + 1
+                                    )
+                                )
+                            );
+
+                        uint16_t target =
+                            static_cast<uint16_t>(
+                                address + 2 + displacement
+                            );
+
+                        return "JR NZ," + hex16(target);
+                    }
+
+                    case 0b101: {
+                        int8_t displacement =
+                            static_cast<int8_t>(
+                                mem.read(
+                                    static_cast<uint16_t>(
+                                        address + 1
+                                    )
+                                )
+                            );
+
+                        uint16_t target =
+                            static_cast<uint16_t>(
+                                address + 2 + displacement
+                            );
+
+                        return "JR Z," + hex16(target);
+                    }
+
+                    default:
+                        return "???";
+                }
+            }
+
+            return "???";
+
+        case 0b11:
+            if (z == 0b101) {
+                // CALL nn
+                if (y == 0b001) {
+                    uint16_t target = verMem16(
+                        mem,
+                        static_cast<uint16_t>(address + 1)
+                    );
+
+                    return "CALL " + hex16(target);
+                }
+
+                // PUSH qq
+                if ((y & 0b001) == 0) {
+                    return "PUSH " + rpName(y);
+                }
+
+                // Prefixo DD: instruções com IX
+                if (y == 0b011) {
+                    return decodificadorAux(
+                        mem,
+                        address,
+                        "IX"
+                    );
+                }
+
+                // Prefixo FD: instruções com IY
+                if (y == 0b111) {
+                    return decodificadorAux(
+                        mem,
+                        address,
+                        "IY"
+                    );
+                }
+            }
+
+            if (z == 0b001) {
+                // RET
+                if (y == 0b001) {
+                    return "RET";
+                }
+
+                // POP qq
+                if ((y & 0b001) == 0) {
+                    return "POP " + rpName(y);
+                }
+            }
+
+            // JP cc,nn
+            if (z == 0b010) {
+                uint16_t target = verMem16(
+                    mem,
+                    static_cast<uint16_t>(address + 1)
+                );
+
+                return "JP " + condicional(y) +
+                       "," + hex16(target);
+            }
+
+            // JP nn
+            if (z == 0b011 && y == 0b000) {
+                uint16_t target = verMem16(
+                    mem,
+                    static_cast<uint16_t>(address + 1)
+                );
+
+                return "JP " + hex16(target);
+            }
+
+            return "???";
+    }
+
+    return "???";
 }
