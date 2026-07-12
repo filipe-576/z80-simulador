@@ -19,11 +19,6 @@ class Linker {
          */
         void linkDebug();
 
-        /**
-         * @brief Exibe a Tabela Global de Simbolo
-         */
-        void printSymbolTable();
-
     private:
         struct Module {
             std::string name;

@@ -19,6 +19,15 @@ void Linker::Link() {
 }
 
 void Linker::linkDebug(){
+    std::cout << "\n======= Tabela Global de Simbolos =======\n";
+    std::cout << "Símbolo\t\t|\tEndereço Absoluto\n";
+    std::cout << "-----------------------------------------------\n";
+    for (const auto& pair : globalSymbolTable) {
+        std::cout << pair.first << "\t\t|\t" << pair.second << "\n";
+    }
+
+    std::cout << "===============================================\n\n";
+    
     for (const auto& modulo : listModules) {
         std::cout << "Modulo " << modulo.name << ": [ ";
         for (int instrucao : modulo.machineCode) {
@@ -97,14 +106,4 @@ void Linker::loadJson(const std::string& fileName) {
 
         listModules.push_back(mod);
     }
-}
-
-void Linker::printSymbolTable() {
-    std::cout << "\n======= Tabela Global de Simbolos =======\n";
-    std::cout << "Símbolo\t\t|\tEndereço Absoluto\n";
-    std::cout << "-----------------------------------------------\n";
-    for (const auto& pair : globalSymbolTable) {
-        std::cout << pair.first << "\t\t|\t" << pair.second << "\n";
-    }
-    std::cout << "===============================================\n\n";
 }
