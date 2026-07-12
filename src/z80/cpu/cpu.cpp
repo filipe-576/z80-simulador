@@ -35,9 +35,14 @@ void CPU::setHalted(bool value){
 
 
 void CPU::step(){
+    
+     if (halted) {
+        return;
+    }
+
     uint8_t byte = fetch8();
 
-    instrucao(*this, byte);
+    executeInstruction(*this, byte);
 }
 
 

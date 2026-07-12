@@ -1,5 +1,5 @@
 #include "instruction_set.h"
-#include "cpu.h"
+#include "../cpu/cpu.h"
 #include <iostream>
 #include <bitset>
 #include <cstdint>

@@ -333,7 +333,7 @@ int GUI::run_interface(Memory &mem, CPU &cpu)
 
         ImGui::Text("PC: %04X", pc);
 
-        std::string instrL = NomeUnicoDeFunçaoQNExiste(mem, pc);
+        std::string instrL = decodificadorPrincipal(mem, pc);
 
         ImGui::Text("Opcode: %02X", mem.read(pc));
         ImGui::Text("%s", instrL.c_str());
