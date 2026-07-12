@@ -30,7 +30,8 @@ target_include_directories(z80-simulador PRIVATE
 # Processador de Macros
 add_executable(macro_processor
     src/macro/main.cpp
-    src/macro/macro_processor.cpp
+    src/macro/macro.cpp
+    src/utils.cpp
 )
 
 target_include_directories(macro_processor PRIVATE
