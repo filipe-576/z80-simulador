@@ -474,3 +474,414 @@ void executeInstruction(CPU& cpu, uint8_t byte) {
             break;
     }
 }
+
+static std::string hex8(uint8_t value)
+{
+    const char* digits = "0123456789ABCDEF";
+    std::string result = "0x00";
+    result[2] = digits[(value >> 4) & 0x0F];
+    result[3] = digits[value & 0x0F];
+    return result;
+}
+
+static std::string hex16(uint16_t value)
+{
+    const char* digits = "0123456789ABCDEF";
+    std::string result = "0x0000";
+    result[2] = digits[(value >> 12) & 0x0F];
+    result[3] = digits[(value >> 8) & 0x0F];
+    result[4] = digits[(value >> 4) & 0x0F];
+    result[5] = digits[value & 0x0F];
+    return result;
+}
+std::string regName(uint8_t code)
+{
+    switch (code) {
+        case 0: return "B";
+        case 1: return "C";
+        case 2: return "D";
+        case 3: return "E";
+        case 4: return "H";
+        case 5: return "L";
+        case 6: return "(HL)";
+        case 7: return "A";
+        default: return "?";
+    }
+}
+
+std::string rpName(uint8_t y)
+{
+    switch (y) {
+        case 0: return "BC";
+        case 2: return "DE";
+        case 4: return "HL";
+        case 6: return "AF";
+        default: return "?";
+    }
+}
+
+static std::string displacementText(int8_t displacement)
+{
+    if (displacement < 0) {
+        return " - " + std::to_string(-static_cast<int>(displacement));
+    }
+    return " + " + std::to_string(static_cast<int>(displacement));
+}
+
+static std::string condicional(uint8_t code)
+{
+    switch (code & 0b111) {
+        case 0: return "NZ";
+        case 1: return "Z";
+        case 2: return "NC";
+        case 3: return "C";
+        case 4: return "PO";
+        case 5: return "PE";
+        case 6: return "P";
+        case 7: return "M";
+        default: return "?";
+    }
+}
+
+static uint16_t verMem16(
+    const Memory& mem,
+    uint16_t address)
+{
+    uint16_t lowByte = mem.read(address);
+
+    uint16_t highByte = mem.read(
+        static_cast<uint16_t>(address + 1)
+    );
+
+    return static_cast<uint16_t>(
+        lowByte | (highByte << 8)
+    );
+}
+
+static std::string decodificadorAux(
+    const Memory& mem,
+    uint16_t address,
+    const std::string& indexName)
+{
+    uint8_t nextByte = mem.read(
+        static_cast<uint16_t>(address + 1)
+    );
+
+    uint8_t op = (nextByte >> 6) & 0b11;
+    uint8_t y = (nextByte >> 3) & 0b111;
+    uint8_t z = nextByte & 0b111;
+
+    // LD IX/IY,nn
+    if (nextByte == 0x21) {
+        uint16_t value = verMem16(
+            mem,
+            static_cast<uint16_t>(address + 2)
+        );
+
+        return "LD " + indexName + "," + hex16(value);
+    }
+
+    // LD IX/IY,(nn)
+    if (nextByte == 0x2A) {
+        uint16_t absoluteAddress = verMem16(
+            mem,
+            static_cast<uint16_t>(address + 2)
+        );
+
+        return "LD " + indexName +
+               ",(" + hex16(absoluteAddress) + ")";
+    }
+
+    // LD (nn),IX/IY
+    if (nextByte == 0x22) {
+        uint16_t absoluteAddress = verMem16(
+            mem,
+            static_cast<uint16_t>(address + 2)
+        );
+
+        return "LD (" + hex16(absoluteAddress) +
+               ")," + indexName;
+    }
+
+    // LD (IX/IY+d),n
+    if (nextByte == 0x36) {
+        int8_t displacement = static_cast<int8_t>(
+            mem.read(
+                static_cast<uint16_t>(address + 2)
+            )
+        );
+
+        uint8_t value = mem.read(
+            static_cast<uint16_t>(address + 3)
+        );
+
+        return "LD (" + indexName +
+               displacementText(displacement) +
+               ")," + hex8(value);
+    }
+
+    // LD r,(IX/IY+d)
+    if (
+        op == 0b01 &&
+        z == 0b110 &&
+        y != 0b110
+    ) {
+        int8_t displacement = static_cast<int8_t>(
+            mem.read(
+                static_cast<uint16_t>(address + 2)
+            )
+        );
+
+        return "LD " + regName(y) +
+               ",(" + indexName +
+               displacementText(displacement) + ")";
+    }
+
+    // LD (IX/IY+d),r
+    if (
+        op == 0b01 &&
+        y == 0b110 &&
+        z != 0b110
+    ) {
+        int8_t displacement = static_cast<int8_t>(
+            mem.read(
+                static_cast<uint16_t>(address + 2)
+            )
+        );
+
+        return "LD (" + indexName +
+               displacementText(displacement) +
+               ")," + regName(z);
+    }
+
+    return "???";
+}
+
+std::string decodificadorPrincipal(
+    const Memory& mem,
+    uint16_t address)
+{
+    uint8_t byte = mem.read(address);
+
+    uint8_t op = (byte >> 6) & 0b11;
+    uint8_t y = (byte >> 3) & 0b111;
+    uint8_t z = byte & 0b111;
+
+    switch (op) {
+        case 0b10:
+            switch (y) {
+                case 0b000:
+                    return "ADD A," + regName(z);
+
+                case 0b010:
+                    return "SUB " + regName(z);
+
+                case 0b100:
+                    return "AND " + regName(z);
+
+                case 0b101:
+                    return "XOR " + regName(z);
+
+                case 0b110:
+                    return "OR " + regName(z);
+
+                case 0b111:
+                    return "CP " + regName(z);
+
+                default:
+                    return "???";
+            }
+
+        case 0b01:
+            if (y == 0b110 && z == 0b110) {
+                return "HALT";
+            }
+
+            return "LD " + regName(y) +
+                   "," + regName(z);
+
+        case 0b00:
+            // LD (nn),A
+            if (z == 0b010 && y == 0b110) {
+                uint16_t absoluteAddress = verMem16(
+                    mem,
+                    static_cast<uint16_t>(address + 1)
+                );
+
+                return "LD (" +
+                       hex16(absoluteAddress) +
+                       "),A";
+            }
+
+            // LD A,(nn)
+            if (z == 0b010 && y == 0b111) {
+                uint16_t absoluteAddress = verMem16(
+                    mem,
+                    static_cast<uint16_t>(address + 1)
+                );
+
+                return "LD A,(" +
+                       hex16(absoluteAddress) +
+                       ")";
+            }
+
+            // LD r,n
+            if (z == 0b110) {
+                uint8_t value = mem.read(
+                    static_cast<uint16_t>(address + 1)
+                );
+
+                return "LD " + regName(y) +
+                       "," + hex8(value);
+            }
+
+            // INC r
+            if (z == 0b100) {
+                return "INC " + regName(y);
+            }
+
+            // DEC r
+            if (z == 0b101) {
+                return "DEC " + regName(y);
+            }
+
+            if (z == 0b000) {
+                switch (y) {
+                    case 0b000:
+                        return "NOP";
+
+                    case 0b011: {
+                        int8_t displacement =
+                            static_cast<int8_t>(
+                                mem.read(
+                                    static_cast<uint16_t>(
+                                        address + 1
+                                    )
+                                )
+                            );
+
+                        uint16_t target =
+                            static_cast<uint16_t>(
+                                address + 2 + displacement
+                            );
+
+                        return "JR " + hex16(target);
+                    }
+
+                    case 0b100: {
+                        int8_t displacement =
+                            static_cast<int8_t>(
+                                mem.read(
+                                    static_cast<uint16_t>(
+                                        address + 1
+                                    )
+                                )
+                            );
+
+                        uint16_t target =
+                            static_cast<uint16_t>(
+                                address + 2 + displacement
+                            );
+
+                        return "JR NZ," + hex16(target);
+                    }
+
+                    case 0b101: {
+                        int8_t displacement =
+                            static_cast<int8_t>(
+                                mem.read(
+                                    static_cast<uint16_t>(
+                                        address + 1
+                                    )
+                                )
+                            );
+
+                        uint16_t target =
+                            static_cast<uint16_t>(
+                                address + 2 + displacement
+                            );
+
+                        return "JR Z," + hex16(target);
+                    }
+
+                    default:
+                        return "???";
+                }
+            }
+
+            return "???";
+
+        case 0b11:
+            if (z == 0b101) {
+                // CALL nn
+                if (y == 0b001) {
+                    uint16_t target = verMem16(
+                        mem,
+                        static_cast<uint16_t>(address + 1)
+                    );
+
+                    return "CALL " + hex16(target);
+                }
+
+                // PUSH qq
+                if ((y & 0b001) == 0) {
+                    return "PUSH " + rpName(y);
+                }
+
+                // Prefixo DD: instruções com IX
+                if (y == 0b011) {
+                    return decodificadorAux(
+                        mem,
+                        address,
+                        "IX"
+                    );
+                }
+
+                // Prefixo FD: instruções com IY
+                if (y == 0b111) {
+                    return decodificadorAux(
+                        mem,
+                        address,
+                        "IY"
+                    );
+                }
+            }
+
+            if (z == 0b001) {
+                // RET
+                if (y == 0b001) {
+                    return "RET";
+                }
+
+                // POP qq
+                if ((y & 0b001) == 0) {
+                    return "POP " + rpName(y);
+                }
+            }
+
+            // JP cc,nn
+            if (z == 0b010) {
+                uint16_t target = verMem16(
+                    mem,
+                    static_cast<uint16_t>(address + 1)
+                );
+
+                return "JP " + condicional(y) +
+                       "," + hex16(target);
+            }
+
+            // JP nn
+            if (z == 0b011 && y == 0b000) {
+                uint16_t target = verMem16(
+                    mem,
+                    static_cast<uint16_t>(address + 1)
+                );
+
+                return "JP " + hex16(target);
+            }
+
+            return "???";
+    }
+
+    return "???";
+}

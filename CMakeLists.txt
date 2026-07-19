@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(z80-simulador LANGUAGES CXX)
+find_package(glfw3 REQUIRED)
+find_package(OpenGL REQUIRED)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -14,12 +16,24 @@ endif()
 
 # Simulador z80
 add_executable(z80-simulador
-src/vm.cpp
-src/z80/cpu/cpu.cpp
-src/z80/cpu/registers.cpp
-src/z80/memory/memory.cpp
-src/z80/instructions/instruction_set.cpp
-src/z80/gui/gui.cpp
+    src/vm.cpp
+    src/z80/cpu/cpu.cpp
+    src/z80/cpu/registers.cpp
+    src/z80/memory/memory.cpp
+    src/z80/instructions/instruction_set.cpp
+    src/z80/gui/gui.cpp
+    
+    external/imgui/imgui.cpp
+    external/imgui/imgui_draw.cpp
+    external/imgui/imgui_tables.cpp
+    external/imgui/imgui_widgets.cpp
+    external/imgui/backends/imgui_impl_glfw.cpp
+    external/imgui/backends/imgui_impl_opengl3.cpp
+    external/imgui/imgui_demo.cpp
+)
+target_link_libraries(z80-simulador PRIVATE
+    glfw
+    OpenGL::GL
 )
 
 target_include_directories(z80-simulador PRIVATE
@@ -63,5 +77,11 @@ src/utils.cpp
 
 target_include_directories(linker PRIVATE
 src/linker
+)
+
+target_include_directories(z80-simulador PRIVATE
+    external/imgui
+    external/imgui/backends
+    
 )
 target_compile_definitions(linker PRIVATE PROJ_DIR="${CMAKE_SOURCE_DIR}")

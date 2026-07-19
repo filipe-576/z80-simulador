@@ -1,4 +1,5 @@
 #include "cpu.h"
+#include "../memory/memory.h"
 #include "../instructions/instruction_set.h"
 #include <cstdint>
 
@@ -9,6 +10,11 @@ CPU::CPU(Memory& memory): mem(memory){
 void CPU::reset(){
     regs.reset();
     mem.reset();
+    halted = false;
+}
+//Para ter um boatao de rest na interface
+void CPU::reset_Gui(){
+    regs.reset();
     halted = false;
 }
 
@@ -29,6 +35,11 @@ void CPU::setHalted(bool value){
 
 
 void CPU::step(){
+    
+     if (halted) {
+        return;
+    }
+
     uint8_t byte = fetch8();
 
     executeInstruction(*this, byte);
@@ -51,6 +62,8 @@ uint16_t CPU::fetch16(){
 
     return (highByte << 8) | lowByte;
 }
+
+
 
 
 void CPU::push(uint16_t value)

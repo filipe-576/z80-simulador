@@ -3,6 +3,7 @@
 #include <cstdint>
 #include "../cpu/cpu.h"
 #include "../cpu/registers.h"
+#include <string>
 
 /**
  * @brief Decodifica um byte lido da memória para determinar e executar a operação correspondente na CPU.
@@ -72,3 +73,10 @@ uint8_t readRegOrHL(CPU& cpu, uint8_t index);
  * @param value  Valor a ser gravado.
  */
 void writeRegOrHL(CPU& cpu, uint8_t index, uint8_t value);
+
+//Partes dedicadas ao gui
+std::string decodificadorPrincipal(const Memory& mem, uint16_t address);
+std::string rpName(uint8_t y);
+std::string regName(uint8_t code);
+
+

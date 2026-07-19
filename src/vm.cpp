@@ -1,5 +1,6 @@
 #include "memory.h"
 #include "z80/cpu/cpu.h"
+#include "gui.h"
 #include <cstdint>
 #include "json.hpp"
 #include <vector>
@@ -81,7 +82,8 @@ int main(int argc, char* argv[]) {
 
     Memory mem;
     CPU cpu(mem);
-    
+    GUI gui;    
+
     load(mem, input_file, baseAddress, entryPoint, realocate);
 
     cpu.getRegisters().PC = baseAddress + entryPoint;
@@ -92,7 +94,8 @@ int main(int argc, char* argv[]) {
         std::cout << static_cast<int>(arr[i]) << " ";
     }
     std::cout << std::endl;
-
+    return gui.run_interface(mem,cpu);
+    /*
     while( !cpu.isHalted() ){
         cpu.step();
         Registers& regis = cpu.getRegisters();
@@ -106,5 +109,5 @@ int main(int argc, char* argv[]) {
 
         std::cin.get();
 
-    }
+    }*/
 }
