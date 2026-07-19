@@ -20,7 +20,7 @@ static void invalidCommand() {
  * @param baseAddress Endereço base da memória para inserção do programa.
  * Caso esteja no modo de carregador absoluto, é substituido pelo endereço base definido pelo ligador.
 **/
-static void load(Memory& mem, std::string fileName, uint16_t& baseAddress, bool realocate){
+static void load(Memory& mem, std::string fileName, uint16_t& baseAddress, uint16_t& entryPoint, bool realocate){
     using json = nlohmann::json;
     std::ifstream file(fileName);
     if ( !file.is_open() ){
@@ -30,6 +30,7 @@ static void load(Memory& mem, std::string fileName, uint16_t& baseAddress, bool 
     json jsonData;
     file >> jsonData;
     std::vector<uint8_t> program = jsonData["machineCode"];
+    entryPoint = jsonData["entryPoint"];
     if( !realocate ){
         baseAddress = jsonData["baseAddress"]; // Usa o endereço base passado pelo ligador realocador
     } else{
@@ -51,6 +52,7 @@ static void load(Memory& mem, std::string fileName, uint16_t& baseAddress, bool 
 int main(int argc, char* argv[]) {
     std::string input_file;
     uint16_t baseAddress = 0;
+    uint16_t entryPoint;
     bool realocate = false;
 
     for( int i = 1; i < argc; ++i ){
@@ -80,11 +82,9 @@ int main(int argc, char* argv[]) {
     Memory mem;
     CPU cpu(mem);
     
-    load(mem, input_file, baseAddress, realocate);
+    load(mem, input_file, baseAddress, entryPoint, realocate);
 
-    cpu.getRegisters().PC = baseAddress;
-    uint16_t startAddress = cpu.fetch16(); // Primeiros 2 bytes do programa definem o offset do inicio da execução
-    cpu.getRegisters().PC = baseAddress + startAddress;
+    cpu.getRegisters().PC = baseAddress + entryPoint;
 
     const auto& arr = mem.get_array();
 

@@ -120,7 +120,7 @@ void Assembler::secondPass() {
     locationCounter = 0;
     std::string opcode, operand;
     unsigned int length, instructionOffset, operandTotalOffset;
-    startAddress = 0;
+    entryPoint = 0;
     
     for( std::string instructionString: program ){
         std::vector<std::string> instruction = utils::tokenizeInstruction(instructionString);
@@ -132,7 +132,7 @@ void Assembler::secondPass() {
         if( opcode == "EQU" || opcode == "INTUSE" || opcode == "INTDEF"){} // Ignora
         else if( opcode == "END" ){
             if( operand.empty() ) return;
-            startAddress = getOperandValue(operand);
+            entryPoint = getOperandValue(operand);
             return;
         } else {
             length = utils::getInstructionSize(instruction);
@@ -179,7 +179,7 @@ void Assembler::generateObjectFile(){
     json_data["useTable"] = usageTable;
     json_data["machineCode"] = machineCode;
     json_data["realocationMap"] = relocationMap;
-    json_data["startAddress"] = startAddress;
+    json_data["entryPoint"] = entryPoint;
 
     json json_array = json::array();
     json_array.push_back(json_data);

@@ -46,7 +46,7 @@ private:
         int operandOffset; // -1 se não tiver
     };
     std::vector<uint8_t> machineCode;
-    int startAddress = -1;
+    int entryPoint = -1;
 
     const std::set<std::string> MACHINE_INSTRUCTIONS = {
         "LD", "ADD", "SUB", "INC", "DEC", "AND", "OR", "XOR", "CP", "JP", "JR",
