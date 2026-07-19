@@ -41,6 +41,8 @@ src/z80/cpu
 src/z80/memory
 src/z80/instructions
 src/z80/gui
+external/imgui
+external/imgui/backends
 )
 target_compile_definitions(z80-simulador PRIVATE PROJ_DIR="${CMAKE_SOURCE_DIR}")
 
@@ -77,11 +79,5 @@ src/utils.cpp
 
 target_include_directories(linker PRIVATE
 src/linker
-)
-
-target_include_directories(z80-simulador PRIVATE
-    external/imgui
-    external/imgui/backends
-    
 )
 target_compile_definitions(linker PRIVATE PROJ_DIR="${CMAKE_SOURCE_DIR}")
