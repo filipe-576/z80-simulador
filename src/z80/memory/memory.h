@@ -38,8 +38,9 @@ public:
  *
  * @param   data  Ponteiro para o conteudo a ser carregado na memória.
  * @param   length  Tamanho do conteudo apontado por 'data'.
+ * @param   address Endereço para carregar o programa
  */
-    void load(const uint8_t* data, int length);
+    void load(const uint8_t* data, int length, uint16_t address = 0);
 
 
 /**
