@@ -10,7 +10,7 @@
       "CALCULAR": [7]
     },
     "machineCode": [12, 0, 13, 8, 14, 9, 15, 0, 5, 0],
-    "realocationMap": [3, 5]
+    "relocationMap": [3, 5]
   },
   {
     "name": "MOD_2",
@@ -23,6 +23,6 @@
       "RESULTADO": [1]
     },
     "machineCode": [12, 0, 16, 5, 99, 2],
-    "realocationMap": [3]
+    "relocationMap": [3]
   }
 ]

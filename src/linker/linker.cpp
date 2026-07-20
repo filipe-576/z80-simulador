@@ -1,5 +1,5 @@
-
 #include "linker.h"
+#include <cstdint>
 #include <iostream>
 #include <vector>
 #include <string>
@@ -9,13 +9,15 @@
 
 using json = nlohmann::json;
 
-Linker::Linker(const std::string& fileName){
+Linker::Linker(const std::string& fileName, int baseAddress)
+    : baseAddress(baseAddress) {
     loadJson(fileName);
 }
 
-void Linker::Link() {
+void Linker::Link(const std::string& outputFileName) {
     oPrimeiroPassoDosLinkerBoys();
     oSegundoPassoDosLinkerBoys();
+    linkerBoysOut(outputFileName);
 }
 
 void Linker::linkDebug(){
@@ -37,32 +39,32 @@ void Linker::linkDebug(){
     }
 }
 
-
 void Linker::oPrimeiroPassoDosLinkerBoys(){
+    int globalOffset = baseAddress;
 
-    int globalOffset = 0;
-
-    for (const auto & module : listModules){  // atribuindo os offsets de cada modulo
+    for (const auto & module : listModules){
         modulesOffsets[module.name] = globalOffset;
 
         for (const auto & symbol : module.definitionTable){
             std::string symbolName = symbol.first;
-
-            globalSymbolTable[symbolName] = symbol.second + globalOffset; //insere na TSG o endereço que tá na tabela de definição + o offset atual desde o ínicio da linkagem
+            globalSymbolTable[symbolName] = symbol.second + globalOffset;
         }
 
         globalOffset += module.size;
-    
     }
 }
 
 void Linker::oSegundoPassoDosLinkerBoys(){
-
     for (auto & module : listModules){
         int offset = modulesOffsets[module.name];
 
-        for (int index : module.realocationMap){
-            module.machineCode[index] = module.machineCode[index] + offset; // atualiza endereços relativos
+        for (int index : module.relocationMap){
+            uint16_t low = module.machineCode[index];
+            uint16_t high = module.machineCode[index + 1];
+            uint16_t address = (high << 8) | low;
+            address += offset;
+            module.machineCode[index] = address & 0xFF;
+            module.machineCode[index + 1] = (address >> 8) & 0xFF;
         }
 
         for (auto & useTablePair : module.useTable){
@@ -70,10 +72,11 @@ void Linker::oSegundoPassoDosLinkerBoys(){
             std::vector<int> indexList = useTablePair.second;
 
             for (int useIndex : indexList){
-                module.machineCode[useIndex] = globalSymbolTable[symbolName]; // coloca os endereços reais dos símbolos no código de máquina
+                uint16_t address = globalSymbolTable[symbolName];
+                module.machineCode[useIndex]     = address & 0xFF;  
+                module.machineCode[useIndex + 1] = (address >> 8) & 0xFF;
             }
         }
-
     }
 }
 
@@ -102,8 +105,56 @@ void Linker::loadJson(const std::string& fileName) {
         }
 
         mod.machineCode = item["machineCode"].get<std::vector<int>>();
-        mod.realocationMap = item["realocationMap"].get<std::vector<int>>();
+        mod.relocationMap = item["relocationMap"].get<std::vector<int>>();
+        mod.entryPoint = item["entryPoint"];
 
         listModules.push_back(mod);
+    }
+}
+
+void Linker::linkerBoysOut(const std::string& outputFileName){
+    using json = nlohmann::json;
+    json out_json;
+
+    std::vector<uint8_t> finalMachineCode;
+    for( const auto& mod : listModules ){
+        finalMachineCode.insert( finalMachineCode.end(), mod.machineCode.begin(), mod.machineCode.end() );
+    }
+
+    std::vector<uint16_t> finalRelocationMap;
+    for( const auto& mod : listModules ){
+        int offset = modulesOffsets[mod.name];
+
+        for (int index : mod.relocationMap) {
+            finalRelocationMap.push_back(index + offset);
+        }
+
+        for( const auto& useTablePair : mod.useTable ){
+            for( int useIndex : useTablePair.second ){
+                finalRelocationMap.push_back(useIndex + offset);
+            }
+        }
+    }
+
+    uint16_t finalEntryPoint = 0;
+    for( const auto& mod : listModules ){
+        if( mod.entryPoint > 0 ){
+            finalEntryPoint = mod.entryPoint + modulesOffsets[mod.name];
+            break;
+        }
+    }
+
+    out_json["machineCode"] = finalMachineCode;
+    out_json["entryPoint"] = finalEntryPoint;
+    out_json["baseAddress"] = baseAddress;
+    out_json["relocationMap"] = finalRelocationMap;
+
+    std::ofstream file(outputFileName);
+    if (file.is_open()) {
+        file << out_json.dump(4);
+        file.close();
+        std::cout << "Arquivo executável '" << outputFileName << "' gerado com sucesso!\n";
+    } else {
+        std::cerr << "Erro: Não foi possível criar o arquivo de saída " << outputFileName << "\n";
     }
 }

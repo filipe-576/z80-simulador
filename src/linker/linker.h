@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <iostream>
 #include <vector>
 #include <string>
@@ -7,37 +8,31 @@
 
 class Linker {
     public:
-        Linker(const std::string& file);
+        Linker(const std::string& file, int baseAddress = 0);
         
-        /**
-         * @brief Executa o primeiro e o segundo passo do ligador
-         */
-        void Link();
+        void Link(const std::string& outputFileName);
 
-        /**
-         * @brief Exibe o código de máquina após o segundo passo
-         */
         void linkDebug();
 
     private:
         struct Module {
             std::string name;
             int size;
-            std::unordered_map<std::string, int> definitionTable; //INTDEF
-            std::unordered_map<std::string, std::vector<int>> useTable; //INTUSE
+            std::unordered_map<std::string, int> definitionTable;
+            std::unordered_map<std::string, std::vector<int>> useTable;
             std::vector<int> machineCode;
-            std::vector<int> realocationMap; 
+            std::vector<int> relocationMap;
+            std::uint16_t entryPoint;
         };
 
+        int baseAddress;
+
         std::vector<Module> listModules;
-        std::unordered_map<std::string, int> globalSymbolTable; // TSG
+        std::unordered_map<std::string, int> globalSymbolTable;
         std::unordered_map<std::string, int> modulesOffsets; 
 
         void oPrimeiroPassoDosLinkerBoys();
         void oSegundoPassoDosLinkerBoys();
-
-        /**
-         * @brief Lê a saída do assembler, um json com informações dos códigos a serem ligados
-         */
         void loadJson(const std::string& fileName); 
+        void linkerBoysOut(const std::string& outputFileName);
 };
