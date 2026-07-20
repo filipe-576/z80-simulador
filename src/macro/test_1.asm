@@ -1,28 +1,28 @@
-LIMIT:  EQU     @5
+LIMIT  EQU     @5
 
-CTR:    DC      @0
+CTR    DC      @0
 INTDEF  COUNT
 EXTERNO INTUSE
 
-ZERO_A: MCDEFN
+ZERO_A MCDEFN
         XOR     A; A = 0
         MCEND
 
-LOAD:   MCDEFN  &REG &VAL
+LOAD   MCDEFN  &REG &VAL
         LD      &REG, &VAL
         MCEND
 
-SKIP:   MCDEFN  &DEST
-LOOP.SER: JP    NZ, &DEST
+SKIP   MCDEFN  &DEST
+LOOP.SER JP    NZ, &DEST
         MCEND
 
-INIT:   MCDEFN
+INIT   MCDEFN
         LOAD    B @0
         LOAD    C @0
         MCEND
 
 
-START:  ZERO_A
+START  ZERO_A
         LD      A, @0
         LD      B, LIMIT
         INC     A
@@ -31,7 +31,7 @@ START:  ZERO_A
 
         INIT
 
-COUNT:  LD      A, (CTR)
+COUNT  LD      A, (CTR)
 
         CP      B
 
@@ -42,5 +42,5 @@ COUNT:  LD      A, (CTR)
 
         LD     A, EXTERNO
 
-_END:   HALT
+_END   HALT
         END     START

@@ -7,7 +7,7 @@ static void invalidCommand() {
 
 int main(int argc, char* argv[]) {
     std::string inputFile;
-    std::string outputFile = "a.o";
+    std::string outputFile = "processado.asm";
 
     for ( int i = 1; i < argc; ++i ) {
         std::string arg = argv[i];

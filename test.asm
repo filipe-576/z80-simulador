@@ -6,15 +6,27 @@ LIMIT       EQU     @5
 COUNTER     DC      @1
 RESULT      DS      @1
 
+RESETREG    MCDEFN
+            LD A, @0
+            LD B, @0
+            LD C, @0
+            LD D, @0
+            LD E, @0
+            LD H, @0
+            LD L, @0
+            LD IX, @0
+            LD IY, @0
+            MCEND
+
 ; codigo
 
-START       LD      A, @0
+START       RESETREG
             LD      (COUNTER), A
+            LD      B, LIMIT
 
 LOOP        LD      A, (COUNTER)
             INC     A
             LD      (COUNTER), A
-            LD      B, LIMIT
             CP      B
             JP      NZ, LOOP
 
