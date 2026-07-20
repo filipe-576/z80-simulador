@@ -143,9 +143,9 @@ void Assembler::secondPass() {
                 operandTotalOffset = instructionOffset + result.operandOffset;
                 Symbol symbol = findInTable(result.symbolOperand);
 
-                if( symbol.type == SymbolType::ABSOLUTE ) continue; // Literais
+                if( symbol.type == SymbolType::ABSOLUTE ); // Literais
 
-                if( symbol.scope == SymbolScope::EXTERN ){ // Símbolos externos
+                else if( symbol.scope == SymbolScope::EXTERN ){ // Símbolos externos
                     insertInUsageTable(result.symbolOperand, operandTotalOffset);
                 } else{ // Símbolos locais
                     relocationMap.push_back(operandTotalOffset);
@@ -178,16 +178,14 @@ void Assembler::generateObjectFile(){
     json_data["definitionTable"] = defTable;
     json_data["useTable"] = usageTable;
     json_data["machineCode"] = machineCode;
-    json_data["realocationMap"] = relocationMap;
+    json_data["relocationMap"] = relocationMap;
     json_data["entryPoint"] = entryPoint;
-
-    json json_array = json::array();
-    json_array.push_back(json_data);
+    json_data["baseAddress"] = 0;
 
     std::ofstream file(outputName);
 
     if( file.is_open() ){
-        file << json_array.dump(4);
+        file << json_data.dump(4);
 
         file.close();
     }

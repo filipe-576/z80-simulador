@@ -12,7 +12,7 @@
 
 
 static void invalidCommand() {
-    std::cerr << "Uso: ./z80-simulador <arquivo.json> [-r <enderecoBase>]\n";
+    std::cerr << "Uso: ./z80-simulador <arquivo.out> [-r <enderecoBase>]\n";
 }
 
 /**
