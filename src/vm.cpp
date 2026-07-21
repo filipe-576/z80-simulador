@@ -88,26 +88,6 @@ int main(int argc, char* argv[]) {
 
     cpu.getRegisters().PC = baseAddress + entryPoint;
 
-    const auto& arr = mem.get_array();
-
-    for( int i = 0; i < 100; i++ ){
-        std::cout << static_cast<int>(arr[i]) << " ";
-    }
-    std::cout << std::endl;
     return gui.run_interface(mem,cpu);
-    /*
-    while( !cpu.isHalted() ){
-        cpu.step();
-        Registers& regis = cpu.getRegisters();
-        std::cout << "Regis.A: "<< std::bitset<8>(regis.A) << std::endl;
-        std::cout << "Regis.B: "<< std::bitset<8>(regis.B) << std::endl;
-        std::cout << "Regis.C: "<< std::bitset<8>(regis.C) << std::endl;
-        std::cout << "Regis.D: "<< std::bitset<8>(regis.D) << std::endl;
-        std::cout << "Regis.E: "<< std::bitset<8>(regis.E) << std::endl;
-        std::cout << "Regis.H: "<< std::bitset<8>(regis.H) << std::endl;
-        std::cout << "Regis.L: "<< std::bitset<8>(regis.L) << std::endl;
 
-        std::cin.get();
-
-    }*/
 }
