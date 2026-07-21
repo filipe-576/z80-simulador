@@ -14,8 +14,7 @@
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <GLES2/gl2.h>
 #endif
-#include <GLFW/glfw3.h> 
-
+#include <GLFW/glfw3.h>
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1900) && !defined(IMGUI_DISABLE_WIN32_FUNCTIONS)
 #pragma comment(lib, "legacy_stdio_definitions")
@@ -32,8 +31,7 @@ static void glfw_error_callback(int error, const char *description)
 
 #include "gui.h"
 static MemoryEditor mem_edit;
-static AppLog log;
-
+// static AppLog log;
 
 // Codigo de Fato
 int GUI::run_interface(Memory &mem, CPU &cpu)
@@ -74,13 +72,13 @@ int GUI::run_interface(Memory &mem, CPU &cpu)
 
     // Janela
     float main_scale = ImGui_ImplGlfw_GetContentScaleForMonitor(glfwGetPrimaryMonitor()); // Valid on GLFW 3.3+ only
-    GLFWwindow *window = glfwCreateWindow((int)(1360 * main_scale), (int)(768 * main_scale), "Z80 Emulator", nullptr, nullptr);
+    GLFWwindow *window = glfwCreateWindow((int)(768 * main_scale), (int)(768 * main_scale), "Z80 Emulator", nullptr, nullptr);
     if (window == nullptr)
         return 1;
     glfwMakeContextCurrent(window);
-    glfwSwapInterval(1); 
+    glfwSwapInterval(1);
 
-    // Setup ImGui 
+    // Setup ImGui
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO &io = ImGui::GetIO();
@@ -91,15 +89,15 @@ int GUI::run_interface(Memory &mem, CPU &cpu)
     //  io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;   // Enable Multi-Viewport / Platform Windows
     //  io.ConfigViewportsNoAutoMerge = true;
     //  io.ConfigViewportsNoTaskBarIcon = true;
-   
+
     ImGui::StyleColorsDark();
 
     ImGuiStyle &style = ImGui::GetStyle();
-    style.ScaleAllSizes(main_scale); 
-    style.FontScaleDpi = main_scale; 
+    style.ScaleAllSizes(main_scale);
+    style.FontScaleDpi = main_scale;
 #if GLFW_VERSION_MAJOR >= 3 && GLFW_VERSION_MINOR >= 3
-    io.ConfigDpiScaleFonts = true;     
-    io.ConfigDpiScaleViewports = true; 
+    io.ConfigDpiScaleFonts = true;
+    io.ConfigDpiScaleViewports = true;
 #endif
 
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
@@ -114,15 +112,10 @@ int GUI::run_interface(Memory &mem, CPU &cpu)
 #endif
     ImGui_ImplOpenGL3_Init(glsl_version);
 
-
     bool show_demo_window = false;
     static AppLog log;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-    static bool mostrar_editor = false;
-    static bool mostrar_macro = false;
-    static bool mostrar_montador = false;
-    static bool mostrar_ligador = false;
-    static bool mostrar_debug = false;
+
 
     ImGuiWindowFlags flags_travadas = ImGuiWindowFlags_NoMove |
                                       ImGuiWindowFlags_NoResize |
@@ -130,7 +123,6 @@ int GUI::run_interface(Memory &mem, CPU &cpu)
                                       ImGuiWindowFlags_NoTitleBar |
                                       ImGuiWindowFlags_NoScrollbar;
 
-    
 #ifdef __EMSCRIPTEN__
     // For an Emscripten build we are disabling file-system access, so let's not attempt to do a fopen() of the imgui.ini file.
     // You may manually call LoadIniSettingsFromMemory() to load settings from your own storage.
@@ -148,11 +140,10 @@ int GUI::run_interface(Memory &mem, CPU &cpu)
             ImGui_ImplGlfw_Sleep(10);
             continue;
         }
-        
 
         if (running && !cpu.isHalted())
         {
-        cpu.step();
+            cpu.step();
         }
         // Pega dimensões atuais para garantir que as janelas ocupem todo o espaço (tiling)
         ImGuiViewport *viewport = ImGui::GetMainViewport();
@@ -161,11 +152,7 @@ int GUI::run_interface(Memory &mem, CPU &cpu)
         float inicio_X = viewport->WorkPos.x;
         float inicio_Y = viewport->WorkPos.y;
 
-        // Define as proporções dinamicamente baseadas no tamanho atual
-        float largura_esquerda = total_X * 0.58f;
-        float largura_direita = total_X * 0.42f;
-        float altura_topo = total_Y * 0.70f;
-        float altura_fundo = total_Y * 0.30f;
+
 
         // Começa o frame do ImGui
         ImGui_ImplOpenGL3_NewFrame();
@@ -176,82 +163,13 @@ int GUI::run_interface(Memory &mem, CPU &cpu)
         if (show_demo_window)
             ImGui::ShowDemoWindow(&show_demo_window);
 
-        // Janela Principal (Editor e Menus)
+
+        // Janela de Registradores
         ImGui::SetNextWindowPos(ImVec2(inicio_X, inicio_Y), ImGuiCond_Always);
-        ImGui::SetNextWindowSize(ImVec2(largura_esquerda, altura_topo), ImGuiCond_Always);
-        ImGui::Begin("Principal", nullptr, flags_travadas);
-
-        ImGui::Checkbox("Demo Window", &show_demo_window);
-
-        if (ImGui::BeginTabBar("MinhasAbas", ImGuiTabBarFlags_None))
-        {
-
-            if (ImGui::BeginTabItem("Menu"))
-            {
-                ImGui::Text("Esta é a aba de Menu.");
-                if (ImGui::Button("Abrir arquivo"))
-                {
-                }
-
-                if (ImGui::Button("Novo arquivo"))
-                {
-                    mostrar_editor = true;
-                }
-
-                ImGui::EndTabItem();
-            }
-            if (ImGui::BeginTabItem("Editor", &mostrar_editor))
-            {
-                ImGui::Text("Esta é a aba de Edicão de arquivo!.");
-
-                ImGui::EndTabItem();
-            }
-
-            if (ImGui::BeginTabItem("Macro", &mostrar_macro))
-            {
-                ImGui::Text("Esta é a aba Macro.");
-
-                ImGui::EndTabItem();
-            }
-
-            if (ImGui::BeginTabItem("Montador", &mostrar_montador))
-            {
-                ImGui::Text("Esta é a aba Montador.");
-
-                ImGui::EndTabItem();
-            }
-
-            if (ImGui::BeginTabItem("Ligador", &mostrar_ligador))
-            {
-                ImGui::Text("Esta é a aba Ligador.");
-
-                ImGui::EndTabItem();
-            }
-
-            if (ImGui::BeginTabItem("Rodando", &mostrar_debug))
-            {
-                ImGui::Text("Esta é a aba de debug.");
-
-                ImGui::EndTabItem();
-            }
-
-            ImGui::EndTabBar();
-        }
-        ImGui::End();
-
-        // Janela de Log (Abaixo da Principal)
-        ImGui::SetNextWindowPos(ImVec2(inicio_X, altura_topo + inicio_Y), ImGuiCond_Always);
-        ImGui::SetNextWindowSize(ImVec2(largura_esquerda, altura_fundo), ImGuiCond_Always);
-        ImGui::Begin("Example: Log", nullptr, flags_travadas);
-        ImGui::End(); // Truque de append para definir flags
-        log.Draw("Example: Log");
-
-        // Janela de Registradores (Lado Direito Superior)
-        ImGui::SetNextWindowPos(ImVec2(inicio_X + largura_esquerda, inicio_Y), ImGuiCond_Always);
-        ImGui::SetNextWindowSize(ImVec2(largura_direita, total_Y * 0.50f), ImGuiCond_Always);
+        ImGui::SetNextWindowSize(ImVec2(total_X, total_Y * 0.50f), ImGuiCond_Always);
         ImGui::Begin("Registradores Z80", nullptr, flags_travadas);
 
-        Registers& regs = cpu.getRegisters();
+        Registers &regs = cpu.getRegisters();
 
         ImGui::SeparatorText("Registradores");
 
@@ -287,8 +205,7 @@ int GUI::run_interface(Memory &mem, CPU &cpu)
             regs.F.H,
             regs.F.PV,
             regs.F.N,
-            regs.F.C
-        );
+            regs.F.C);
 
         ImGui::SeparatorText("Opções");
 
@@ -309,7 +226,7 @@ int GUI::run_interface(Memory &mem, CPU &cpu)
         if (ImGui::Button("Avançar p/ proxima instrução"))
         {
             running = false;
-            cpu.mem.write(0x1000, 0x0F); 
+            cpu.mem.write(0x1000, 0x0F);
             if (!cpu.isHalted())
             {
                 cpu.step();
@@ -318,13 +235,7 @@ int GUI::run_interface(Memory &mem, CPU &cpu)
 
         ImGui::SameLine();
 
-        if (ImGui::Button("Reset"))
-        {
-            running = false;
-            cpu.reset_Gui();
-        }
-        
-
+       
 
         ImGui::SeparatorText("Proxima instrução");
 
@@ -338,14 +249,13 @@ int GUI::run_interface(Memory &mem, CPU &cpu)
         ImGui::Text("Opcode: %02X", mem.read(pc));
         ImGui::Text("%s", instrL.c_str());
 
-
         ImGui::End();
 
         // Editor de Memória (Lado Direito Inferior)
-        ImGui::SetNextWindowPos(ImVec2(inicio_X + largura_esquerda, inicio_Y + (total_Y * 0.50f)), ImGuiCond_Always);
-        ImGui::SetNextWindowSize(ImVec2(largura_direita, total_Y * 0.50f), ImGuiCond_Always);
+        ImGui::SetNextWindowPos(ImVec2(inicio_X, inicio_Y + (total_Y * 0.50f)), ImGuiCond_Always);
+        ImGui::SetNextWindowSize(ImVec2(total_X, total_Y * 0.50f), ImGuiCond_Always);
         ImGui::Begin("Memory Editor", nullptr, flags_travadas);
-        mem_edit.DrawContents(mem.Outro_get_array(), 0x10000); 
+        mem_edit.DrawContents(mem.Outro_get_array(), 0x10000);
         ImGui::End();
 
         // Rendering
