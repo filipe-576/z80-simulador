@@ -7,7 +7,7 @@
 #include <string>
 
 static void invalidCommand(){
-    std::cerr << "Uso: ./linker <arquivo1.o> <arquivo2.o> (inserir todos os arquivos .o) [-r <endereco_base>]\n";
+    std::cerr << "Uso: ./linker <arquivo1.o> <arquivo2.o> (inserir todos os arquivos .o) [-r <endereco_base>] [-o <arquivo_saida>]\n";
 }
 
 int main(int argc, char* argv[]) {
@@ -17,6 +17,7 @@ int main(int argc, char* argv[]) {
     }
 
     std::vector<std::string> input_files;
+    std::string output_file;
     int baseAddress = 0;
 
     for (int i = 1; i < argc; ++i) {
@@ -26,7 +27,13 @@ int main(int argc, char* argv[]) {
                 invalidCommand();
                 return 1;
             }
-                baseAddress = std::stoi(argv[++i]);
+            baseAddress = std::stoi(argv[++i]);
+        } else if( arg == "-o" ) {
+            if( i + 1 > argc ){
+                invalidCommand();
+                return 1;
+            }
+            output_file = argv[++i];    
         } else {
             input_files.push_back(arg);
         }
@@ -37,12 +44,8 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    std::string output_file;
-    size_t last_dot = input_files[0].find_last_of(".");
-    if (last_dot != std::string::npos && input_files[0].substr(last_dot) == ".o") {
-        output_file = input_files[0].substr(0, last_dot) + ".out";
-    } else {
-        output_file = input_files[0] + ".out";
+    if( output_file.empty() ){
+        output_file = "a.out";
     }
 
     try {
