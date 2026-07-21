@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include <deque>
+#include "../utils.h"
 
 // Proximas etapas:
 // [x] 1. reconhecer a chamada de uma macro e colar as linhas do corpo dela na saída

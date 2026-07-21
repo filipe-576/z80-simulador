@@ -8,7 +8,6 @@
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
-#include <bitset>
 
 
 static void invalidCommand() {

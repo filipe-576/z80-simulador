@@ -5,7 +5,6 @@
 #include <unordered_map>
 #include <set>
 #include <cstdint>
-#include "../utils.h"
 
 struct Macro {
     std::string name;

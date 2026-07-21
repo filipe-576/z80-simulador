@@ -55,9 +55,6 @@ private:
     const std::set<std::string> PSEUDO_INSTRUCTIONS = {
         "END", "EQU", "DS", "DC", "INTUSE", "INTDEF"
     };
-    const std::unordered_map<std::string, unsigned int> OPERATOR_SIZE = {
-        {"", 1}, {"", 2}
-    };
 
     void loadFile();
 
@@ -99,5 +96,10 @@ private:
  * @return  Os bytes da instrução e o offset para o operando.
  */
     GenerateCodeResult generateMachineCode(const std::vector<std::string>& instruction);
+
+/**
+ * @brief   Retorna o tamanho em bytes ocupado pela instrução.
+ */
+    unsigned int getInstructionSize(const std::vector<std::string>& instruction);
 
 };

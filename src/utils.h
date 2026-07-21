@@ -49,9 +49,6 @@ namespace utils {
  */
     std::vector<std::string> tokenizeInstruction(const std::string& instruction);
 
-/**
- * @brief   Retorna o tamanho em bytes ocupado pela instrução.
- */
-    unsigned int getInstructionSize(const std::vector<std::string>& instruction);
+
 
 }

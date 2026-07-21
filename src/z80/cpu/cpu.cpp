@@ -12,7 +12,7 @@ void CPU::reset(){
     mem.reset();
     halted = false;
 }
-//Para ter um boatao de rest na interface
+
 void CPU::reset_Gui(){
     regs.reset();
     halted = false;
