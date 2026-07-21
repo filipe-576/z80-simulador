@@ -31,7 +31,10 @@ namespace utils {
     std::string getOperand(const std::vector<std::string>& instruction, const unsigned short index=0);
 
 
-    // additionalOpcodes contém as macros da MNT definidas pelo usuário.
+/**
+ * @brief   Retorna a label da instrução, se existir.
+ * Considera opcodes adicionais (ex.: nomes de macros da MNT).
+ */
     std::string getLabel(const std::vector<std::string>& instruction, const std::set<std::string>& additionalOpcodes = {});
 
 

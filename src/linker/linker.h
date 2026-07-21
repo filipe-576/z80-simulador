@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <iostream>
 #include <vector>
 #include <string>
 #include <unordered_map>
@@ -10,6 +9,9 @@ class Linker {
     public:
         Linker(const std::vector<std::string>& file, int baseAddress = 0);
         
+        /**
+         * @brief   Executa a ligação dos módulos objeto
+         */
         void Link(const std::string& outputFileName);
 
         void linkDebug();
@@ -31,8 +33,19 @@ class Linker {
         std::unordered_map<std::string, int> globalSymbolTable;
         std::unordered_map<std::string, int> modulesOffsets; 
 
+        /**
+         * @brief   Calcula o offset de cada módulo e constrói
+         *          a tabela global de símbolos com endereços absolutos.
+         */
         void oPrimeiroPassoDosLinkerBoys();
+
+        /**
+         * @brief   Aplica realocação nos endereços relativos e
+         *          resolve referências externas usando a tabela global de símbolos.
+         */
         void oSegundoPassoDosLinkerBoys();
-        void loadJson(const std::string& fileName); 
+
+        void loadJson(const std::string& fileName);
+
         void linkerBoysOut(const std::string& outputFileName);
 };

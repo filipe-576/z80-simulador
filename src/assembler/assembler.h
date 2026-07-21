@@ -61,8 +61,14 @@ private:
 
     void loadFile();
 
+/**
+ * @brief   Preenche a tabela de símbolos.
+ */
     void firstPass();
 
+/**
+ * @brief   Gera o código de máquina, preenche o mapa de realocação e tabelas de uso e definição.
+ */
     void secondPass();
 
     void generateObjectFile();
