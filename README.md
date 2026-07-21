@@ -45,7 +45,7 @@ arquivo.asm
 - Instruções suportadas: `LD`, `ADD`, `SUB`, `INC`, `DEC`, `AND`, `OR`, `XOR`, `CP`, `JP`, `JR`, `CALL`, `RET`, `PUSH`, `POP`, `NOP`, `HALT`
 - Saída: arquivo objeto `.o` em formato JSON contendo código de máquina, tabela de definições, tabela de uso e mapa de realocação
 
-### Ligador (`linker`) *(em desenvolvimento)*
+### Ligador (`linker`)
 
 - Resolução de referências externas entre módulos objeto
 - Suporte a **realocação de endereços** via flag `-r`
@@ -192,6 +192,7 @@ Monta o código assembly (pré-processado ou não) e gera um arquivo objeto.
 | --------------- | ----------------------------------------- |
 | `<arquivo.asm>` | Arquivo assembly de entrada (obrigatório) |
 | `-o <saida.o>`  | Arquivo objeto de saída (padrão: `a.o`)   |
+> Saída deve utilizar extensão `.out` para executar diretamente ignorando o ligador.
 
 **Exemplo:**
 
@@ -201,12 +202,12 @@ Monta o código assembly (pré-processado ou não) e gera um arquivo objeto.
 
 ---
 
-### 3. Ligador *(em desenvolvimento)*
+### 3. Ligador
 
 Liga um ou mais módulos objeto e gera o arquivo executável. A realocação de endereços é opcional.
 
 ```bash
-./linker <arquivo.o> [-r <endbase>]
+./linker <arquivo1.o> [<arquivo2.o>...] [-r <endbase>]
 ```
 
 | Argumento      | Descrição                                        |
@@ -218,7 +219,7 @@ Liga um ou mais módulos objeto e gera o arquivo executável. A realocação de 
 
 ```bash
 # Ligação absoluta (sem realocação)
-./linker programa.o
+./linker modulo1.o modulo2.o
 
 # Ligação com realocação a partir do endereço 0x1000 (4096)
 ./linker programa.o -r 4096
@@ -228,7 +229,7 @@ Liga um ou mais módulos objeto e gera o arquivo executável. A realocação de 
 
 ### 4. Simulador Z80
 
-Executa o arquivo `.out` gerado pelo ligador com interface gráfica. A realocação pode ser feita diretamente no carregador, sem necessidade de passar pelo ligador.
+Executa o arquivo `.out` gerado pelo ligador (ou do montador) com interface gráfica. A realocação pode ser feita diretamente no carregador, sem necessidade de passar pelo ligador.
 
 ```bash
 ./z80-simulador <arquivo.out> [-r <endbase>]
@@ -262,7 +263,7 @@ Executa o arquivo `.out` gerado pelo ligador com interface gráfica. A realocaç
 # Passo 2: Montar
 ./assembler programa_exp.asm -o programa.o
 
-# Passo 3: Ligar (gera o .out)
+# Passo 3: Ligar (gera o .out) (opcional, se o programa não usar diferentes módulos)
 ./linker programa.o
 
 # Passo 4: Executar no simulador
