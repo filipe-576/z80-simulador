@@ -1,0 +1,28 @@
+[
+  {
+    "name": "MOD_1",
+    "size": 10,
+    "definitionTable": {
+      "RESULTADO": 9
+    },
+    "useTable": {
+      "FATOR": [1],
+      "CALCULAR": [7]
+    },
+    "machineCode": [12, 0, 13, 8, 14, 9, 15, 0, 5, 0],
+    "relocationMap": [3, 5]
+  },
+  {
+    "name": "MOD_2",
+    "size": 6,
+    "definitionTable": {
+      "CALCULAR": 0,
+      "FATOR": 5
+    },
+    "useTable": {
+      "RESULTADO": [1]
+    },
+    "machineCode": [12, 0, 16, 5, 99, 2],
+    "relocationMap": [3]
+  }
+]
