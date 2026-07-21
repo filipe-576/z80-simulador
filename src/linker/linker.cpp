@@ -9,9 +9,11 @@
 
 using json = nlohmann::json;
 
-Linker::Linker(const std::string& fileName, int baseAddress)
+Linker::Linker(const std::vector<std::string>& fileNames, int baseAddress)
     : baseAddress(baseAddress) {
-    loadJson(fileName);
+    for (const auto& fileName : fileNames) {
+        loadJson(fileName);
+    }
 }
 
 void Linker::Link(const std::string& outputFileName) {
@@ -91,25 +93,24 @@ void Linker::loadJson(const std::string& fileName) {
     json dados_json;
     file >> dados_json; 
 
-    for (const auto& item : dados_json) {
-        Module mod;
-        mod.name = item["name"];
-        mod.size = item["size"];
+    Module mod;
+    mod.name = dados_json["name"];
+    mod.size = dados_json["size"];
 
-        for (auto& el : item["definitionTable"].items()) {
-            mod.definitionTable[el.key()] = el.value();
-        }
-
-        for (auto& el : item["useTable"].items()) {
-            mod.useTable[el.key()] = el.value().get<std::vector<int>>();
-        }
-
-        mod.machineCode = item["machineCode"].get<std::vector<int>>();
-        mod.relocationMap = item["relocationMap"].get<std::vector<int>>();
-        mod.entryPoint = item["entryPoint"];
-
-        listModules.push_back(mod);
+    for (auto& el : dados_json["definitionTable"].items()) {
+        mod.definitionTable[el.key()] = el.value();
     }
+
+    for (auto& el : dados_json["useTable"].items()) {
+        mod.useTable[el.key()] = el.value().get<std::vector<int>>();
+    }
+    
+    mod.machineCode = dados_json["machineCode"].get<std::vector<int>>();
+    mod.relocationMap = dados_json["relocationMap"].get<std::vector<int>>();
+    mod.entryPoint = dados_json["entryPoint"];
+
+    listModules.push_back(mod);
+    
 }
 
 void Linker::linkerBoysOut(const std::string& outputFileName){

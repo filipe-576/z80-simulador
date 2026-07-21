@@ -8,7 +8,7 @@
 
 class Linker {
     public:
-        Linker(const std::string& file, int baseAddress = 0);
+        Linker(const std::vector<std::string>& file, int baseAddress = 0);
         
         void Link(const std::string& outputFileName);
 
