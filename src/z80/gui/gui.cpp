@@ -237,7 +237,7 @@ int GUI::run_interface(Memory &mem, CPU &cpu)
 
        
 
-        ImGui::SeparatorText("Proxima instrução");
+        ImGui::SeparatorText("");
 
         uint16_t pc = regs.PC;
         uint8_t opcode = mem.read(pc);

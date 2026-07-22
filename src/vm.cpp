@@ -34,6 +34,7 @@ static void load(Memory& mem, std::string fileName, uint16_t& baseAddress, uint1
     if( !realocate ){
         baseAddress = jsonData["baseAddress"]; // Usa o endereço base passado pelo ligador realocador
     } else{
+        entryPoint += baseAddress;
         std::vector<uint16_t> relocationMap = jsonData["relocationMap"];
         for( const auto& add: relocationMap ){
             uint8_t low = program[add];
@@ -85,7 +86,7 @@ int main(int argc, char* argv[]) {
 
     load(mem, input_file, baseAddress, entryPoint, realocate);
 
-    cpu.getRegisters().PC = baseAddress + entryPoint;
+    cpu.getRegisters().PC = entryPoint;
 
     return gui.run_interface(mem,cpu);
 
